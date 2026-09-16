@@ -1,0 +1,104 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+import os
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+from fastapi import HTTPException, Query
+
+import main as collector
+from analytics_config import ReportConfig
+from analytics_store import MessageStore
+from daily_report import DailyReportService
+
+
+logger = logging.getLogger("telemeric.analytics")
+report_config = ReportConfig.from_env(collector.TARGET_CHAT_ID)
+message_store = MessageStore(os.getenv("ANALYTICS_DB_PATH", "/tmp/telemeric/analytics.sqlite3"))
+report_service = DailyReportService(message_store, report_config)
+
+_original_deliver = collector.deliver
+_original_run_collector = collector.run_collector
+
+
+async def deliver_with_analytics(updates):
+    """Preserve existing site delivery, then mirror data into analytics cache."""
+    await _original_deliver(updates)
+    try:
+        message_store.record_updates(updates)
+    except Exception:
+        logger.exception("Analytics cache write failed; collector delivery remains healthy")
+
+
+async def report_runner() -> None:
+    while True:
+        client = collector.collector_client
+        if client and client.is_connected() and collector.collector_status.get("connected"):
+            await report_service.run(client)
+            return
+        await asyncio.sleep(1)
+
+
+async def run_collector_with_reports(session: str) -> None:
+    if not report_config.enabled:
+        await _original_run_collector(session)
+        return
+    report_task = asyncio.create_task(report_runner())
+    try:
+        await _original_run_collector(session)
+    finally:
+        report_task.cancel()
+        try:
+            await report_task
+        except asyncio.CancelledError:
+            pass
+
+
+collector.deliver = deliver_with_analytics
+collector.run_collector = run_collector_with_reports
+app = collector.app
+
+
+@app.get("/analytics/status")
+async def analytics_status(token: str = Query(default="")):
+    collector.require_setup_token(token)
+    tz = ZoneInfo(report_config.timezone)
+    today = datetime.now(tz).date()
+    metrics = report_service.metrics_for_day(today)
+    return {
+        "enabled": report_config.enabled,
+        "sourceChatId": report_config.source_chat_id,
+        "reportChatId": report_config.report_chat_id,
+        "timezone": report_config.timezone,
+        "workday": f"{report_config.workday_start}-{report_config.workday_end}",
+        "reportTime": report_config.report_time,
+        "slaTargetMinutes": report_config.sla_target_minutes,
+        "slaTargetPercent": report_config.sla_target_percent,
+        "agentsConfigured": metrics["agent_configured"],
+        "today": {
+            "messages": metrics["total_messages"],
+            "tickets": metrics["total_tickets"],
+            "responded": metrics["responded"],
+            "unanswered": metrics["unanswered"],
+            "slaPercent": metrics["sla_percent"],
+        },
+    }
+
+
+@app.post("/analytics/report-now")
+async def analytics_report_now(token: str = Query(default="")):
+    collector.require_setup_token(token)
+    client = collector.collector_client
+    if not client or not client.is_connected() or not collector.collector_status.get("connected"):
+        raise HTTPException(status_code=503, detail="Telegram collector is not connected")
+    tz = ZoneInfo(report_config.timezone)
+    result = await report_service.send_day(client, datetime.now(tz).date(), force=True)
+    metrics = result.get("metrics") or {}
+    return {
+        "sent": result.get("sent", False),
+        "tickets": metrics.get("total_tickets", 0),
+        "slaPercent": metrics.get("sla_percent"),
+        "unanswered": metrics.get("unanswered", 0),
+    }
