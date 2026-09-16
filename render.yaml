@@ -6,7 +6,7 @@ services:
     region: frankfurt
     rootDir: collector
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn bootstrap:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     autoDeployTrigger: commit
     maxShutdownDelaySeconds: 30
@@ -17,6 +17,28 @@ services:
         value: https://telegram-support-analytics.s-v-tolibov.chatgpt.site
       - key: HISTORY_LIMIT
         value: 5000
+      - key: DAILY_REPORT_ENABLED
+        value: false
+      - key: REPORT_CHAT_ID
+        value: -1002707306458
+      - key: REPORT_TIMEZONE
+        value: Asia/Tashkent
+      - key: WORKDAY_START
+        value: 10:00
+      - key: WORKDAY_END
+        value: 19:00
+      - key: REPORT_TIME
+        value: 19:01
+      - key: SLA_TARGET_MINUTES
+        value: 15
+      - key: SLA_TARGET_PERCENT
+        value: 90
+      - key: TICKET_GAP_MINUTES
+        value: 30
+      - key: ANALYTICS_AGENT_IDS
+        sync: false
+      - key: ANALYTICS_AGENT_USERNAMES
+        sync: false
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
