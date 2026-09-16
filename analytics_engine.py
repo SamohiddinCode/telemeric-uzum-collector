@@ -51,11 +51,20 @@ def _name(message: dict[str, Any]) -> str:
     )
 
 
+def _username(message: dict[str, Any]) -> str:
+    return str(message.get("username") or "").lower().lstrip("@")
+
+
 def _is_agent(message: dict[str, Any], config: ReportConfig) -> bool:
-    username = str(message.get("username") or "").lower().lstrip("@")
+    username = _username(message)
     return int(message.get("sender_id") or 0) in config.agent_ids or bool(
         username and username in config.agent_usernames
     )
+
+
+def _is_service_message(message: dict[str, Any], config: ReportConfig) -> bool:
+    username = _username(message)
+    return bool(username and username in config.service_bot_usernames)
 
 
 def _canonical(text: str) -> str:
@@ -80,6 +89,8 @@ def build_tickets(messages: list[dict[str, Any]], config: ReportConfig) -> list[
     gap = config.ticket_gap_minutes * 60
 
     for message in messages:
+        if _is_service_message(message, config):
+            continue
         sender_id = int(message.get("sender_id") or 0)
         if not sender_id:
             continue
@@ -119,7 +130,8 @@ def _percentile(values: list[float], p: float) -> float | None:
 
 
 def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[str, Any]:
-    tickets = build_tickets(messages, config)
+    effective_messages = [m for m in messages if not _is_service_message(m, config)]
+    tickets = build_tickets(effective_messages, config)
     responded = [t for t in tickets if t.response_minutes is not None]
     response_times = [t.response_minutes for t in responded if t.response_minutes is not None]
     sla_ok = [t for t in responded if (t.response_minutes or 0) <= config.sla_target_minutes]
@@ -156,7 +168,7 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
     return {
         "tickets": tickets,
         "total_tickets": len(tickets),
-        "total_messages": len(messages),
+        "total_messages": len(effective_messages),
         "responded": len(responded),
         "unanswered": len(unanswered),
         "sla_ok": len(sla_ok),
@@ -177,14 +189,14 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
 def build_commentary(metrics: dict[str, Any], config: ReportConfig) -> str:
     if not metrics["agent_configured"]:
         return (
-            "SLA пока не рассчитывается: добавьте Telegram ID/usernames сотрудников. "
+            "SLA пока не рассчитывается: не настроен общий аккаунт поддержки. "
             "Остальная статистика уже собирается."
         )
     if not metrics["total_tickets"]:
         return "За выбранную смену обращений не найдено."
     sla = metrics["sla_percent"]
     parts = [
-        "Не было обращений с зафиксированным ответом сотрудника."
+        "Не было обращений с зафиксированным ответом поддержки."
         if sla is None
         else f"SLA {'выполнен' if sla >= config.sla_target_percent else 'ниже цели'}: {sla:.1f}% при цели {config.sla_target_percent:.0f}%."
     ]
