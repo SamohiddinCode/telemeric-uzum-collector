@@ -61,23 +61,39 @@ collector.run_collector = run_collector_with_reports
 app = collector.app
 
 
-@app.get("/analytics/status")
-async def analytics_status(token: str = Query(default="")):
-    collector.require_setup_token(token)
+def parse_report_date(value: str | None):
     tz = ZoneInfo(report_config.timezone)
-    today = datetime.now(tz).date()
-    metrics = report_service.metrics_for_day(today)
+    if not value:
+        return datetime.now(tz).date()
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD") from exc
+
+
+@app.get("/analytics/status")
+async def analytics_status(
+    token: str = Query(default=""),
+    date: str | None = Query(default=None),
+):
+    collector.require_setup_token(token)
+    target_day = parse_report_date(date)
+    metrics = report_service.metrics_for_day(target_day)
     return {
         "enabled": report_config.enabled,
         "sourceChatId": report_config.source_chat_id,
         "reportChatId": report_config.report_chat_id,
         "timezone": report_config.timezone,
-        "workday": f"{report_config.workday_start}-{report_config.workday_end}",
+        "workdayFallback": f"{report_config.workday_start}-{report_config.workday_end}",
+        "detectedShift": f"{metrics['shift_start']}-{metrics['shift_end']}",
+        "shiftSource": metrics["shift_source"],
         "reportTime": report_config.report_time,
         "slaTargetMinutes": report_config.sla_target_minutes,
         "slaTargetPercent": report_config.sla_target_percent,
-        "agentsConfigured": metrics["agent_configured"],
-        "today": {
+        "supportAccounts": sorted(report_config.agent_usernames),
+        "ignoredServiceBots": sorted(report_config.service_bot_usernames),
+        "date": str(target_day),
+        "metrics": {
             "messages": metrics["total_messages"],
             "tickets": metrics["total_tickets"],
             "responded": metrics["responded"],
@@ -88,16 +104,23 @@ async def analytics_status(token: str = Query(default="")):
 
 
 @app.post("/analytics/report-now")
-async def analytics_report_now(token: str = Query(default="")):
+async def analytics_report_now(
+    token: str = Query(default=""),
+    date: str | None = Query(default=None),
+):
     collector.require_setup_token(token)
     client = collector.collector_client
     if not client or not client.is_connected() or not collector.collector_status.get("connected"):
         raise HTTPException(status_code=503, detail="Telegram collector is not connected")
-    tz = ZoneInfo(report_config.timezone)
-    result = await report_service.send_day(client, datetime.now(tz).date(), force=True)
+    target_day = parse_report_date(date)
+    result = await report_service.send_day(client, target_day, force=True)
     metrics = result.get("metrics") or {}
     return {
         "sent": result.get("sent", False),
+        "date": str(target_day),
+        "shift": f"{metrics.get('shift_start', '—')}-{metrics.get('shift_end', '—')}",
+        "shiftSource": metrics.get("shift_source"),
+        "reportChatId": report_config.report_chat_id,
         "tickets": metrics.get("total_tickets", 0),
         "slaPercent": metrics.get("sla_percent"),
         "unanswered": metrics.get("unanswered", 0),
