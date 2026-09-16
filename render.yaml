@@ -2,9 +2,8 @@ services:
   - type: web
     name: telemeric-uzum-collector
     runtime: python
-    plan: starter
+    plan: free
     region: frankfurt
-    rootDir: collector
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn bootstrap:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
@@ -20,7 +19,7 @@ services:
       - key: DAILY_REPORT_ENABLED
         value: false
       - key: REPORT_CHAT_ID
-        value: -1002707306458
+        value: 8419189523
       - key: REPORT_TIMEZONE
         value: Asia/Tashkent
       - key: WORKDAY_START
@@ -35,10 +34,10 @@ services:
         value: 90
       - key: TICKET_GAP_MINUTES
         value: 30
-      - key: ANALYTICS_AGENT_IDS
-        sync: false
       - key: ANALYTICS_AGENT_USERNAMES
         value: uzum_franchise
+      - key: SERVICE_BOT_USERNAMES
+        value: opening_closing_bot
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
