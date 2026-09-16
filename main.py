@@ -3,13 +3,14 @@ import base64
 import hashlib
 import html
 import os
+import secrets
 import signal
 from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import FastAPI, Form, HTTPException, Query
+from fastapi import FastAPI, Form, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
@@ -25,6 +26,7 @@ SITE_URL = os.environ.get("TELEMERIC_SITE_URL", "").rstrip("/")
 COLLECTOR_SECRET = os.environ.get("TELEGRAM_COLLECTOR_SECRET", "")
 SITES_AUTH_TOKEN = os.environ.get("SITES_AUTH_TOKEN", "")
 SETUP_TOKEN = os.environ.get("SETUP_TOKEN", "")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 HISTORY_LIMIT = int(os.environ.get("HISTORY_LIMIT", "5000"))
 
 collector_task: asyncio.Task[Any] | None = None
@@ -246,7 +248,16 @@ def page(title: str, body: str) -> HTMLResponse:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await start_saved_collector()
+    if TELEGRAM_BOT_TOKEN:
+        collector_status.update(
+            authorized=True,
+            connected=False,
+            account="@uzum_franchise_support_bot",
+            group="Uzum Franchise Chat",
+            error="Ожидание связи с bridge",
+        )
+    else:
+        await start_saved_collector()
     yield
     global collector_task
     if collector_task:
@@ -256,6 +267,42 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Telemeric Uzum Collector", lifespan=lifespan)
+
+
+def require_bridge_token(authorization: str) -> None:
+    prefix = "Bearer "
+    supplied = authorization[len(prefix):] if authorization.startswith(prefix) else ""
+    if not TELEGRAM_BOT_TOKEN or not secrets.compare_digest(supplied, TELEGRAM_BOT_TOKEN):
+        raise HTTPException(status_code=401, detail="Неверный ключ bridge")
+
+
+@app.post("/bridge/ingest")
+async def bridge_ingest(
+    payload: dict[str, Any],
+    authorization: str = Header(default=""),
+) -> dict[str, Any]:
+    require_bridge_token(authorization)
+    updates = payload.get("updates")
+    if not isinstance(updates, list):
+        raise HTTPException(status_code=400, detail="updates must be a list")
+    account = str(payload.get("account") or "@uzum_franchise_support_bot")
+    group_title = str(payload.get("groupTitle") or "Uzum Franchise Chat")
+    collector_status.update(
+        authorized=True,
+        connected=True,
+        account=account,
+        group=group_title,
+        error="",
+    )
+    if updates:
+        await deliver(updates)
+    else:
+        await site_request("POST", "/api/telegram/ingest", {
+            "updates": [],
+            "account": account,
+            "groupTitle": group_title,
+        })
+    return {"ok": True, "accepted": len(updates)}
 
 
 @app.get("/health")

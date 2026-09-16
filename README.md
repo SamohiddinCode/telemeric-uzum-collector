@@ -10,6 +10,9 @@ Required service secrets:
 - `TELEGRAM_COLLECTOR_SECRET` shared with the Sites ingestion endpoint.
 - `SITES_AUTH_TOKEN` for identity-less access to the private Site.
 - `SETUP_TOKEN` protecting the one-time `/setup` page and analytics admin endpoints.
+- `TELEGRAM_BOT_TOKEN` authenticating mirrored updates from the existing
+  `telegram-usedesk-bridge` service. The bridge keeps ownership of the Telegram
+  webhook; the collector never replaces it.
 
 The Telegram StringSession is encrypted with a key derived from
 `TELEGRAM_COLLECTOR_SECRET` before it is stored in the Site database. The Site
