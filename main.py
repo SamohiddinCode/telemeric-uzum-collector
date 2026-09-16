@@ -5,12 +5,14 @@ import html
 import os
 import secrets
 import signal
+import json
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import FastAPI, Form, Header, HTTPException, Query
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse
 from telethon import TelegramClient, events
 from telethon.errors import SessionPasswordNeededError
@@ -47,6 +49,53 @@ backfill_status: dict[str, Any] = {
     "imported": 0,
     "error": "",
 }
+
+
+def telegram_export_updates(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert Telegram Desktop JSON export messages to Bot API-like updates."""
+    result: list[dict[str, Any]] = []
+    for item in payload.get("messages", []):
+        if not isinstance(item, dict) or item.get("type") != "message":
+            continue
+        text_value = item.get("text", "")
+        if isinstance(text_value, list):
+            text = "".join(part if isinstance(part, str) else str(part.get("text", "")) for part in text_value)
+        else:
+            text = str(text_value or "")
+        text = text.strip()
+        if not text:
+            continue
+        date_value = item.get("date_unixtime")
+        if date_value is not None:
+            try:
+                timestamp = int(date_value)
+            except (TypeError, ValueError):
+                timestamp = 0
+        else:
+            try:
+                timestamp = int(datetime.fromisoformat(str(item.get("date", "")).replace("Z", "+00:00")).timestamp())
+            except (TypeError, ValueError, OverflowError):
+                timestamp = 0
+        sender_id = str(item.get("from_id") or "")
+        is_support_bot = sender_id.endswith("8724485176") or "support_bot" in str(item.get("from", "")).lower()
+        sender: dict[str, Any] = {
+            "id": int(sender_id.removeprefix("user").removeprefix("bot")) if sender_id.removeprefix("user").removeprefix("bot").isdigit() else abs(hash(sender_id)) % 2_000_000_000,
+            "first_name": str(item.get("from") or ""),
+            "last_name": "",
+            "username": "uzum_franchise_support_bot" if is_support_bot else "",
+            "is_bot": is_support_bot,
+        }
+        message: dict[str, Any] = {
+            "message_id": int(item.get("id") or len(result) + 1),
+            "date": timestamp,
+            "text": text,
+            "chat": {"id": TARGET_CHAT_ID, "title": str(payload.get("name") or "Uzum Franchise Chat"), "type": "supergroup"},
+            "from": sender,
+        }
+        if item.get("reply_to_message_id"):
+            message["reply_to_message"] = {"message_id": int(item["reply_to_message_id"])}
+        result.append({"update_id": message["message_id"], "message": message})
+    return result[-HISTORY_LIMIT:]
 
 
 def required_settings_ready() -> bool:
@@ -359,7 +408,32 @@ async def setup(token: str = Query(default="")) -> HTMLResponse:
     if backfill_status["running"]:
         return page("Импорт истории", "<h1>История загружается</h1><p class='ok'>Можно закрыть страницу. Импорт продолжится в фоне.</p>")
     description = "Введите номер аккаунта, который уже состоит в нужной группе. Он будет использован только для однократной загрузки старой истории." if TELEGRAM_BOT_TOKEN else "Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны."
-    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code'><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>")
+    upload = f"<hr><h2>Или загрузите экспорт</h2><p>Поддерживается JSON из Telegram Desktop.</p><form method='post' action='/setup/import-json' enctype='multipart/form-data'><input type='hidden' name='token' value='{html.escape(token)}'><input name='file' type='file' accept='.json,application/json' required><button type='submit'>Загрузить историю JSON</button></form>"
+    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code'><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>{upload}")
+
+
+@app.post("/setup/import-json", response_class=HTMLResponse)
+async def import_json(token: str = Form(...), file: UploadFile = File(...)) -> HTMLResponse:
+    require_setup_token(token)
+    raw = await file.read(10_000_001)
+    if len(raw) > 10_000_000:
+        return page("Файл слишком большой", "<h1>Файл слишком большой</h1><p class='error'>Максимальный размер — 10 МБ.</p>")
+    try:
+        payload = json.loads(raw.decode("utf-8-sig"))
+        updates = telegram_export_updates(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError, AttributeError, TypeError, ValueError) as exc:
+        return page("Ошибка файла", f"<h1>Не удалось прочитать JSON</h1><p class='error'>{html.escape(str(exc))}</p>")
+    if not updates:
+        return page("Нет сообщений", "<h1>Сообщения не найдены</h1><p class='error'>Нужен экспорт чата в формате JSON из Telegram Desktop.</p>")
+    backfill_status.update(running=True, imported=0, error="")
+    try:
+        for start in range(0, len(updates), 100):
+            await deliver(updates[start:start + 100])
+        backfill_status.update(running=False, imported=len(updates), error="")
+    except Exception as exc:  # noqa: BLE001
+        backfill_status.update(running=False, error=str(exc))
+        return page("Ошибка импорта", f"<h1>Импорт не завершён</h1><p class='error'>{html.escape(str(exc))}</p>")
+    return page("Готово", f"<h1>История загружена</h1><p class='ok'>Передано сообщений: {len(updates)}. Откройте кабинет и обновите страницу.</p>")
 
 
 @app.post("/setup/send-code", response_class=HTMLResponse)
