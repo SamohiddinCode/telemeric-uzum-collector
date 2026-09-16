@@ -6,6 +6,8 @@ from zoneinfo import ZoneInfo
 
 from analytics_config import ReportConfig
 from analytics_engine import build_metrics
+from analytics_store import MessageStore
+from daily_report import DailyReportService
 from report_renderer import ReportRenderer
 
 
@@ -13,18 +15,20 @@ class AnalyticsTests(unittest.TestCase):
     def setUp(self):
         self.config = ReportConfig(
             -1002707306458,
-            -1002707306458,
+            8419189523,
             agent_usernames={"uzum_franchise"},
+            service_bot_usernames={"opening_closing_bot"},
         )
         tz = ZoneInfo("Asia/Tashkent")
-        ts = lambda h, m: int(datetime(2026, 9, 16, h, m, tzinfo=tz).timestamp())
+        self.ts = lambda h, m: int(datetime(2026, 9, 16, h, m, tzinfo=tz).timestamp())
         self.messages = [
-            {"message_id": 1, "ts": ts(10, 1), "sender_id": 100, "sender_name": "Partner A", "username": "a", "text": "Когда будет выплата?", "reply_to_message_id": None},
-            {"message_id": 2, "ts": ts(10, 3), "sender_id": 100, "sender_name": "Partner A", "username": "a", "text": "Проверьте пожалуйста", "reply_to_message_id": None},
-            {"message_id": 3, "ts": ts(10, 8), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Выплата сегодня после 15:00", "reply_to_message_id": 1},
-            {"message_id": 4, "ts": ts(11, 0), "sender_id": 101, "sender_name": "Partner B", "username": "b", "text": "Приложение не работает", "reply_to_message_id": None},
-            {"message_id": 5, "ts": ts(11, 30), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Перезапустите приложение", "reply_to_message_id": 4},
-            {"message_id": 6, "ts": ts(12, 0), "sender_id": 102, "sender_name": "Partner C", "username": "c", "text": "Нужен договор аренды", "reply_to_message_id": None},
+            {"message_id": 1, "ts": self.ts(10, 1), "sender_id": 100, "sender_name": "Partner A", "username": "a", "text": "Когда будет выплата?", "reply_to_message_id": None},
+            {"message_id": 2, "ts": self.ts(10, 3), "sender_id": 100, "sender_name": "Partner A", "username": "a", "text": "Проверьте пожалуйста", "reply_to_message_id": None},
+            {"message_id": 3, "ts": self.ts(10, 8), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Выплата сегодня после 15:00", "reply_to_message_id": 1},
+            {"message_id": 4, "ts": self.ts(11, 0), "sender_id": 101, "sender_name": "Partner B", "username": "b", "text": "Приложение не работает", "reply_to_message_id": None},
+            {"message_id": 5, "ts": self.ts(11, 30), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Перезапустите приложение", "reply_to_message_id": 4},
+            {"message_id": 6, "ts": self.ts(12, 0), "sender_id": 102, "sender_name": "Partner C", "username": "c", "text": "Нужен договор аренды", "reply_to_message_id": None},
+            {"message_id": 7, "ts": self.ts(18, 59), "sender_id": 700, "sender_name": "Shift Bot", "username": "opening_closing_bot", "text": "Смена скоро будет закрыта", "reply_to_message_id": None},
         ]
 
     def test_metrics(self):
@@ -33,9 +37,45 @@ class AnalyticsTests(unittest.TestCase):
             (metrics["total_tickets"], metrics["responded"], metrics["unanswered"], metrics["sla_ok"]),
             (3, 2, 1, 1),
         )
+        self.assertEqual(metrics["total_messages"], 6)
         self.assertAlmostEqual(metrics["sla_percent"], 50.0)
         self.assertAlmostEqual(metrics["median_minutes"], 18.5)
         self.assertTrue(metrics["agent_configured"])
+
+    def test_shift_bot_sets_report_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = MessageStore(str(Path(tmp) / "analytics.sqlite3"))
+            updates = []
+            raw_messages = [
+                (100, self.ts(9, 55), 700, "opening_closing_bot", "Подготовка к смене"),
+                (101, self.ts(10, 0), 700, "opening_closing_bot", "Смена открыта"),
+                (102, self.ts(10, 5), 100, "partner_a", "Когда будет выплата?"),
+                (103, self.ts(10, 9), 900, "uzum_franchise", "Сегодня после 15:00"),
+                (104, self.ts(19, 0), 700, "opening_closing_bot", "Смена закрыта"),
+                (105, self.ts(19, 5), 101, "partner_b", "Позднее сообщение"),
+            ]
+            for message_id, ts, sender_id, username, text in raw_messages:
+                updates.append({
+                    "message": {
+                        "message_id": message_id,
+                        "date": ts,
+                        "text": text,
+                        "chat": {"id": -1002707306458},
+                        "from": {
+                            "id": sender_id,
+                            "first_name": username,
+                            "username": username,
+                            "is_bot": username == "opening_closing_bot",
+                        },
+                    }
+                })
+            store.record_updates(updates)
+            service = DailyReportService(store, self.config)
+            metrics = service.metrics_for_day(date(2026, 9, 16))
+            self.assertEqual(metrics["shift_start"], "10:00")
+            self.assertEqual(metrics["shift_end"], "19:00")
+            self.assertEqual(metrics["shift_source"], "opening_closing_bot")
+            self.assertEqual(metrics["total_tickets"], 1)
 
     def test_render(self):
         metrics = build_metrics(self.messages, self.config)
