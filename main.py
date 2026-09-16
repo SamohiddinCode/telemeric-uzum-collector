@@ -30,6 +30,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 HISTORY_LIMIT = int(os.environ.get("HISTORY_LIMIT", "5000"))
 
 collector_task: asyncio.Task[Any] | None = None
+backfill_task: asyncio.Task[Any] | None = None
 collector_client: TelegramClient | None = None
 login_client: TelegramClient | None = None
 login_phone = ""
@@ -39,6 +40,11 @@ collector_status: dict[str, Any] = {
     "connected": False,
     "account": "",
     "group": "",
+    "error": "",
+}
+backfill_status: dict[str, Any] = {
+    "running": False,
+    "imported": 0,
     "error": "",
 }
 
@@ -162,7 +168,7 @@ async def heartbeat() -> None:
         await asyncio.sleep(30)
 
 
-async def backfill(client: TelegramClient, entity: Any) -> None:
+async def backfill(client: TelegramClient, entity: Any) -> int:
     messages = [message async for message in client.iter_messages(entity, limit=HISTORY_LIMIT)]
     messages.reverse()
     batch: list[dict[str, Any]] = []
@@ -175,6 +181,34 @@ async def backfill(client: TelegramClient, entity: Any) -> None:
             await deliver(batch)
             batch = []
     await deliver(batch)
+    return sum(1 for message in messages if (message.message or "").strip())
+
+
+async def run_history_backfill(session: str) -> None:
+    client = TelegramClient(StringSession(session), API_ID, API_HASH)
+    backfill_status.update(running=True, imported=0, error="")
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            raise RuntimeError("Требуется повторная авторизация Telegram-аккаунта")
+        entity = await client.get_entity(TARGET_CHAT_ID)
+        imported = await backfill(client, entity)
+        backfill_status.update(imported=imported, error="")
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - surfaced through health and setup page
+        backfill_status["error"] = str(exc)
+    finally:
+        backfill_status["running"] = False
+        if client.is_connected():
+            await client.disconnect()
+
+
+def start_history_backfill(session: str) -> None:
+    global backfill_task
+    if backfill_task and not backfill_task.done():
+        return
+    backfill_task = asyncio.create_task(run_history_backfill(session))
 
 
 async def run_collector(session: str) -> None:
@@ -264,6 +298,8 @@ async def lifespan(_: FastAPI):
         collector_task.cancel()
     if collector_client and collector_client.is_connected():
         await collector_client.disconnect()
+    if backfill_task:
+        backfill_task.cancel()
 
 
 app = FastAPI(title="Telemeric Uzum Collector", lifespan=lifespan)
@@ -307,15 +343,23 @@ async def bridge_ingest(
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    return {"ok": True, "settingsReady": required_settings_ready(), **collector_status}
+    return {
+        "ok": True,
+        "settingsReady": required_settings_ready(),
+        **collector_status,
+        "historyImport": backfill_status,
+    }
 
 
 @app.get("/setup", response_class=HTMLResponse)
 async def setup(token: str = Query(default="")) -> HTMLResponse:
     require_setup_token(token)
-    if collector_status.get("connected"):
+    if collector_status.get("connected") and not TELEGRAM_BOT_TOKEN:
         return page("Telemeric Uzum", f"<h1>Telegram подключён</h1><p class='ok'>{html.escape(str(collector_status.get('account')))} читает группу {html.escape(str(collector_status.get('group')))}.</p>")
-    return page("Подключение Telegram", f"<h1>Подключение Telegram</h1><p>Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны.</p><form method='post' action='/setup/send-code'><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>")
+    if backfill_status["running"]:
+        return page("Импорт истории", "<h1>История загружается</h1><p class='ok'>Можно закрыть страницу. Импорт продолжится в фоне.</p>")
+    description = "Введите номер аккаунта, который уже состоит в нужной группе. Он будет использован только для однократной загрузки старой истории." if TELEGRAM_BOT_TOKEN else "Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны."
+    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code'><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>")
 
 
 @app.post("/setup/send-code", response_class=HTMLResponse)
@@ -350,6 +394,9 @@ async def verify(token: str = Form(...), code: str = Form(...), password: str = 
     await save_session(session)
     await login_client.disconnect()
     login_client = None
+    if TELEGRAM_BOT_TOKEN:
+        start_history_backfill(session)
+        return page("Готово", f"<h1>Импорт запущен</h1><p class='ok'>Загружаются последние {HISTORY_LIMIT} сообщений группы. Новые сообщения продолжает получать рабочий бот.</p>")
     await start_saved_collector()
     return page("Готово", "<h1>Аккаунт подключён</h1><p class='ok'>Сборщик загружает историю и новые сообщения выбранной группы. Кабинет начнёт обновляться автоматически.</p>")
 

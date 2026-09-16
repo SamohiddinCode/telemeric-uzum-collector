@@ -45,6 +45,20 @@ class BridgeIngestTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, {"ok": True, "accepted": 0})
         site_request.assert_awaited_once()
 
+    async def test_setup_offers_history_login_while_bridge_is_connected(self):
+        previous_setup_token = main.SETUP_TOKEN
+        previous_status = dict(main.collector_status)
+        main.SETUP_TOKEN = "setup-test-token"
+        main.collector_status["connected"] = True
+        try:
+            response = await main.setup(token="setup-test-token")
+            self.assertIn("Импорт истории Telegram", response.body.decode())
+            self.assertIn("Получить код в Telegram", response.body.decode())
+        finally:
+            main.SETUP_TOKEN = previous_setup_token
+            main.collector_status.clear()
+            main.collector_status.update(previous_status)
+
 
 if __name__ == "__main__":
     unittest.main()
