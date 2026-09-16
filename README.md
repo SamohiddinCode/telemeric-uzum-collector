@@ -26,10 +26,15 @@ is unchanged. `bootstrap.py` wraps the existing delivery function, mirrors norma
 messages into a disposable local SQLite cache, and starts the report scheduler only
 when `DAILY_REPORT_ENABLED=true`.
 
+The support team uses one shared Telegram account: `@uzum_franchise`. Two operators
+may work through it on different days, but reports intentionally do not split metrics
+by employee. Any message sent by `@uzum_franchise` is treated as a support response
+for SLA calculations.
+
 The report uses the configured workday window and sends three PNG images:
 
 1. Executive summary: tickets, SLA, median response, unanswered and top categories.
-2. Load & response: hourly traffic, response-time metrics and agent workload.
+2. Load & response: hourly traffic, response-time metrics and shift-quality indicators.
 3. Details: top questions, top solutions and the longest SLA breaches.
 
 Important settings:
@@ -39,13 +44,12 @@ Important settings:
 - `WORKDAY_START=10:00`, `WORKDAY_END=19:00`.
 - `REPORT_TIME=19:01`.
 - `SLA_TARGET_MINUTES=15`, `SLA_TARGET_PERCENT=90`.
-- `ANALYTICS_AGENT_IDS` — comma-separated Telegram user IDs for support staff.
-- `ANALYTICS_AGENT_USERNAMES` — optional comma-separated usernames without `@`.
-- `TICKET_GAP_MINUTES=30` — customer messages inside this gap stay in one open ticket until the first staff response.
+- `ANALYTICS_AGENT_USERNAMES=uzum_franchise` — shared support account without employee-level breakdown.
+- `TICKET_GAP_MINUTES=30` — customer messages inside this gap stay in one open ticket until the first support response.
 
-Keep `DAILY_REPORT_ENABLED=false` until the destination group and staff list have
-been verified. The original Telegram -> Site delivery continues even if analytics
-cache writes or report rendering fail.
+Keep `DAILY_REPORT_ENABLED=false` until the destination group has been verified and
+a manual report has been checked. The original Telegram -> Site delivery continues
+even if analytics cache writes or report rendering fail.
 
 Protected operator endpoints:
 
