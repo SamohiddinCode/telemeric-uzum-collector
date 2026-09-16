@@ -38,7 +38,7 @@ services:
       - key: ANALYTICS_AGENT_IDS
         sync: false
       - key: ANALYTICS_AGENT_USERNAMES
-        sync: false
+        value: uzum_franchise
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
