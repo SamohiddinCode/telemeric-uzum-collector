@@ -83,12 +83,11 @@ class ReportRenderer:
         draw.text((100, 645), "Ключевые сигналы", font=self.font(24), fill=self.TEXT)
         p90 = "—" if m["p90_minutes"] is None else f"{m['p90_minutes']:.1f} мин"
         signals = [
+            f"• Ответов от @uzum_franchise: {m['responded']}",
             f"• Просрочки SLA: {len(m['delays'])}",
             f"• P90 response: {p90}",
-            f"• Сотрудники: {len(m['agents'])}",
+            f"• Без первого ответа: {m['unanswered']}",
         ]
-        if not m["agent_configured"]:
-            signals.append("• ⚠ Список сотрудников пока не настроен")
         y = 695
         for line in signals:
             draw.text((100, y), line, font=self.font(23), fill=self.TEXT)
@@ -110,7 +109,7 @@ class ReportRenderer:
         image.save(out, "PNG", optimize=True)
 
     def charts(self, m: dict[str, Any], c: ReportConfig, day: date, out: str):
-        image, draw = self.canvas("LOAD & RESPONSE", day.strftime("%d.%m.%Y") + " · нагрузка и SLA")
+        image, draw = self.canvas("LOAD & RESPONSE", day.strftime("%d.%m.%Y") + " · нагрузка и качество смены")
         self.card(draw, (70, 195, 1000, 555))
         draw.text((100, 225), "Обращения по часам", font=self.font(28), fill=self.TEXT)
         hourly = dict(m["hourly"])
@@ -149,28 +148,33 @@ class ReportRenderer:
             y += 58
 
         self.card(draw, (70, 595, 1530, 920))
-        draw.text((100, 625), "Нагрузка по сотрудникам", font=self.font(28), fill=self.TEXT)
-        agents = m["agents"][:8]
-        if not agents:
-            draw.text(
-                (100, 690),
-                "Нет данных: настройте ANALYTICS_AGENT_IDS / ANALYTICS_AGENT_USERNAMES",
-                font=self.font(22),
-                fill=self.MUTED,
-            )
-        else:
-            maximum = max(v for _, v in agents)
-            y = 690
-            for name, count in agents:
-                draw.text((100, y), name[:28], font=self.font(20), fill=self.TEXT)
-                draw.rounded_rectangle((450, y + 2, 1320, y + 26), 10, fill="#ECE6F8")
-                draw.rounded_rectangle(
-                    (450, y + 2, 450 + int(870 * count / maximum), y + 26),
-                    10,
-                    fill=self.PURPLE,
-                )
-                draw.text((1350, y), str(count), font=self.font(19), fill=self.TEXT)
-                y += 40
+        draw.text((100, 625), "Качество обработки смены", font=self.font(28), fill=self.TEXT)
+        total = max(1, m["total_tickets"])
+        responded_pct = m["responded"] / total * 100
+        unanswered_pct = m["unanswered"] / total * 100
+        sla_pct = m["sla_percent"] if m["sla_percent"] is not None else 0.0
+        quality = [
+            ("Получили ответ", m["responded"], responded_pct, self.GREEN),
+            ("В SLA", m["sla_ok"], sla_pct, self.PURPLE),
+            ("Просрочено", len(m["delays"]), (len(m["delays"]) / total * 100), self.RED),
+            ("Без ответа", m["unanswered"], unanswered_pct, self.RED),
+        ]
+        y = 685
+        for label, count, pct, color in quality:
+            draw.text((100, y), label, font=self.font(21), fill=self.TEXT)
+            draw.text((350, y), f"{count}", font=self.font(21), fill=self.TEXT)
+            draw.rounded_rectangle((430, y + 3, 1330, y + 29), 11, fill="#ECE6F8")
+            width = max(0, min(900, int(900 * pct / 100)))
+            if width:
+                draw.rounded_rectangle((430, y + 3, 430 + width, y + 29), 11, fill=color)
+            draw.text((1360, y), f"{pct:.1f}%", font=self.font(20), fill=self.MUTED)
+            y += 52
+        draw.text(
+            (100, 885),
+            "Support account: @uzum_franchise · без разбивки по сотрудникам",
+            font=self.font(18),
+            fill=self.MUTED,
+        )
         image.save(out, "PNG", optimize=True)
 
     def details(self, m: dict[str, Any], c: ReportConfig, day: date, out: str):
@@ -197,7 +201,7 @@ class ReportRenderer:
         y = 280
         for i, item in enumerate(
             m["top_solutions"][:4]
-            or [{"text": "Пока нет зафиксированных ответов сотрудников", "count": 0}],
+            or [{"text": "Пока нет зафиксированных ответов поддержки", "count": 0}],
             1,
         ):
             draw.text((830, y), f"{i}. ×{item['count']}", font=self.font(18), fill=self.PURPLE)
