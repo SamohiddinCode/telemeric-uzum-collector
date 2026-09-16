@@ -18,6 +18,7 @@ class ReportConfig:
     ticket_gap_minutes: int = 30
     agent_ids: set[int] = field(default_factory=set)
     agent_usernames: set[str] = field(default_factory=set)
+    service_bot_usernames: set[str] = field(default_factory=set)
 
     @classmethod
     def from_env(cls, source_chat_id: int) -> "ReportConfig":
@@ -31,9 +32,14 @@ class ReportConfig:
             for v in os.getenv("ANALYTICS_AGENT_USERNAMES", "uzum_franchise").split(",")
             if v.strip()
         }
+        service_bots = {
+            v.strip().lower().lstrip("@")
+            for v in os.getenv("SERVICE_BOT_USERNAMES", "opening_closing_bot").split(",")
+            if v.strip()
+        }
         return cls(
             source_chat_id=source_chat_id,
-            report_chat_id=int(os.getenv("REPORT_CHAT_ID", str(source_chat_id))),
+            report_chat_id=int(os.getenv("REPORT_CHAT_ID", "8419189523")),
             enabled=os.getenv("DAILY_REPORT_ENABLED", "false").lower() in {"1", "true", "yes", "on"},
             timezone=os.getenv("REPORT_TIMEZONE", "Asia/Tashkent"),
             workday_start=os.getenv("WORKDAY_START", "10:00"),
@@ -44,4 +50,5 @@ class ReportConfig:
             ticket_gap_minutes=int(os.getenv("TICKET_GAP_MINUTES", "30")),
             agent_ids=ids,
             agent_usernames=usernames,
+            service_bot_usernames=service_bots,
         )
