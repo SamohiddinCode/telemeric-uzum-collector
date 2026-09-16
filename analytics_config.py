@@ -28,7 +28,7 @@ class ReportConfig:
         }
         usernames = {
             v.strip().lower().lstrip("@")
-            for v in os.getenv("ANALYTICS_AGENT_USERNAMES", "").split(",")
+            for v in os.getenv("ANALYTICS_AGENT_USERNAMES", "uzum_franchise").split(",")
             if v.strip()
         }
         return cls(
