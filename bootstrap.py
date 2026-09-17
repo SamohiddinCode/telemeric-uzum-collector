@@ -176,7 +176,7 @@ async def analytics_test_delivery(
     try:
         await bot_sender.send_message(
             report_config.report_chat_id,
-            "✅ <b>Telemeric staging подключён</b>\n\n"
+            "✅ <b>Тестовый сервис подключён</b>\n\n"
             "Получатель отчётов подтверждён. Следующий этап — импорт реальных данных смены и отправка 3 PNG.",
         )
     except RuntimeError as exc:

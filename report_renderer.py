@@ -59,7 +59,7 @@ class ReportRenderer:
             draw.text((x + 24, y + 116), note, font=self.font(16), fill=self.MUTED)
 
     def summary(self, m: dict[str, Any], c: ReportConfig, day: date, out: str):
-        image, draw = self.canvas("ЕЖЕДНЕВНЫЙ ОТЧЁТ SLA", day.strftime("%d.%m.%Y") + " · Telemeric Uzum")
+        image, draw = self.canvas("ЕЖЕДНЕВНЫЙ ОТЧЁТ SLA", day.strftime("%d.%m.%Y"))
         cards = [
             ("Обращения партнёров", str(m["total_tickets"]), "только запросы к поддержке"),
             (
