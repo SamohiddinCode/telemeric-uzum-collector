@@ -49,6 +49,10 @@ backfill_status: dict[str, Any] = {
     "imported": 0,
     "error": "",
 }
+report_client_status: dict[str, Any] = {
+    "connected": False,
+    "error": "",
+}
 
 
 def telegram_export_updates(payload: dict[str, Any]) -> list[dict[str, Any]]:
@@ -243,6 +247,8 @@ async def run_history_backfill(session: str, keep_connected: bool = False) -> No
         await client.connect()
         if not await client.is_user_authorized():
             raise RuntimeError("Требуется повторная авторизация Telegram-аккаунта")
+        if keep_connected:
+            report_client_status.update(connected=True, error="")
         entity = await client.get_entity(TARGET_CHAT_ID)
         imported = await backfill(client, entity)
         backfill_status.update(running=False, imported=imported, error="")
@@ -252,10 +258,14 @@ async def run_history_backfill(session: str, keep_connected: bool = False) -> No
         raise
     except Exception as exc:  # noqa: BLE001 - surfaced through health and setup page
         backfill_status["error"] = str(exc)
+        if keep_connected:
+            report_client_status.update(connected=False, error=str(exc))
     finally:
         backfill_status["running"] = False
         if client.is_connected():
             await client.disconnect()
+        if keep_connected:
+            report_client_status["connected"] = False
 
 
 def start_history_backfill(session: str, keep_connected: bool = False) -> None:
@@ -273,10 +283,10 @@ async def start_bridge_report_client() -> None:
     try:
         session = await load_session()
     except Exception as exc:  # noqa: BLE001 - surfaced through health
-        collector_status["error"] = f"Не удалось получить сессию: {exc}"
+        report_client_status["error"] = f"Не удалось получить сессию: {exc}"
         return
     if not session:
-        collector_status["error"] = "Откройте /setup и войдите в Telegram"
+        report_client_status["error"] = "Откройте /setup и войдите в Telegram"
         return
     # No NewMessage handler is installed here. The existing bridge remains the
     # sole owner of live collection, avoiding duplicate production delivery.
@@ -422,7 +432,7 @@ async def health() -> dict[str, Any]:
     return {
         "ok": True,
         "settingsReady": required_settings_ready(),
-        "reportClientConnected": bool(collector_client and collector_client.is_connected()),
+        "reportClient": report_client_status,
         **collector_status,
         "historyImport": backfill_status,
     }
