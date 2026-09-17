@@ -37,6 +37,7 @@ collector_client: TelegramClient | None = None
 login_client: TelegramClient | None = None
 login_phone = ""
 login_code_hash = ""
+login_lock = asyncio.Lock()
 collector_status: dict[str, Any] = {
     "authorized": False,
     "connected": False,
@@ -365,6 +366,18 @@ def page(title: str, body: str) -> HTMLResponse:
     return HTMLResponse(f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>body{{margin:0;background:#f5f4fb;color:#171b2e;font:16px system-ui}}main{{max-width:520px;margin:8vh auto;padding:32px;background:#fff;border:1px solid #e6e2f1;border-radius:24px;box-shadow:0 18px 60px #49208018}}h1{{margin:0 0 8px}}p{{color:#667085;line-height:1.55}}label{{display:block;margin:18px 0 6px;font-weight:700}}input{{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d8d2e6;border-radius:12px;font:inherit}}button{{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font:700 16px system-ui;cursor:pointer}}.ok{{padding:14px;background:#eafaf3;color:#107458;border-radius:12px}}.error{{padding:14px;background:#fff4ea;color:#a34c00;border-radius:12px}}</style></head><body><main>{body}</main></body></html>""")
 
 
+def code_form(token: str, phone: str) -> HTMLResponse:
+    return page(
+        "Введите код",
+        f"<h1>Введите код из Telegram</h1><p>Код отправлен на {html.escape(phone)}. "
+        "Если включён облачный пароль, укажите его ниже.</p>"
+        f"<form method='post' action='/setup/verify'><input type='hidden' name='token' value='{html.escape(token)}'>"
+        "<label>Код</label><input name='code' inputmode='numeric' autocomplete='one-time-code' required>"
+        "<label>Облачный пароль (если есть)</label><input name='password' type='password'>"
+        "<button type='submit'>Подключить аккаунт</button></form>",
+    )
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     if TELEGRAM_BOT_TOKEN:
@@ -447,7 +460,7 @@ async def setup(token: str = Query(default="")) -> HTMLResponse:
         return page("Импорт истории", "<h1>История загружается</h1><p class='ok'>Можно закрыть страницу. Импорт продолжится в фоне.</p>")
     description = "Введите номер аккаунта, который уже состоит в нужной группе. Он будет использован только для однократной загрузки старой истории." if TELEGRAM_BOT_TOKEN else "Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны."
     upload = f"<hr><h2>Или загрузите экспорт</h2><p>Поддерживается JSON из Telegram Desktop.</p><form method='post' action='/setup/import-json' enctype='multipart/form-data'><input type='hidden' name='token' value='{html.escape(token)}'><input name='file' type='file' accept='.json,application/json' required><button type='submit'>Загрузить историю JSON</button></form>"
-    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code'><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>{upload}")
+    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code' onsubmit=\"const button=this.querySelector('button');button.disabled=true;button.textContent='Отправляем код…'\"><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>{upload}")
 
 
 @app.post("/setup/import-json", response_class=HTMLResponse)
@@ -480,14 +493,30 @@ async def send_code(token: str = Form(...), phone: str = Form(...)) -> HTMLRespo
     require_setup_token(token)
     if not API_ID or not API_HASH:
         return page("Нет API-настроек", "<h1>Нужны Telegram API ID и API Hash</h1><p class='error'>Сначала заполните секреты сервиса в Render.</p>")
-    if login_client and login_client.is_connected():
-        await login_client.disconnect()
-    login_client = TelegramClient(StringSession(), API_ID, API_HASH)
-    await login_client.connect()
-    sent = await login_client.send_code_request(phone)
-    login_phone = phone
-    login_code_hash = sent.phone_code_hash
-    return page("Введите код", f"<h1>Введите код из Telegram</h1><p>Код отправлен на {html.escape(phone)}. Если включён облачный пароль, укажите его ниже.</p><form method='post' action='/setup/verify'><input type='hidden' name='token' value='{html.escape(token)}'><label>Код</label><input name='code' inputmode='numeric' autocomplete='one-time-code' required><label>Облачный пароль (если есть)</label><input name='password' type='password'><button type='submit'>Подключить аккаунт</button></form>")
+    async with login_lock:
+        if login_client and login_client.is_connected() and login_phone == phone and login_code_hash:
+            return code_form(token, phone)
+        if login_client and login_client.is_connected():
+            await login_client.disconnect()
+        login_client = TelegramClient(StringSession(), API_ID, API_HASH)
+        try:
+            await login_client.connect()
+            sent = await login_client.send_code_request(phone)
+        except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
+            if login_client.is_connected():
+                await login_client.disconnect()
+            login_client = None
+            login_phone = ""
+            login_code_hash = ""
+            return page(
+                "Не удалось отправить код",
+                "<h1>Код пока не отправлен</h1>"
+                f"<p class='error'>Telegram отклонил подключение ({html.escape(type(exc).__name__)}). Подождите минуту и попробуйте ещё раз.</p>"
+                f"<a href='/setup?token={html.escape(token)}'>Вернуться к подключению</a>",
+            )
+        login_phone = phone
+        login_code_hash = sent.phone_code_hash
+        return code_form(token, phone)
 
 
 @app.post("/setup/verify", response_class=HTMLResponse)

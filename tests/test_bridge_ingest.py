@@ -59,6 +59,45 @@ class BridgeIngestTests(unittest.IsolatedAsyncioTestCase):
             main.collector_status.clear()
             main.collector_status.update(previous_status)
 
+    async def test_setup_disables_send_button_after_submit(self):
+        previous_setup_token = main.SETUP_TOKEN
+        main.SETUP_TOKEN = "setup-test-token"
+        try:
+            response = await main.setup(token="setup-test-token")
+            body = response.body.decode()
+            self.assertIn("button.disabled=true", body)
+            self.assertIn("Отправляем код…", body)
+        finally:
+            main.SETUP_TOKEN = previous_setup_token
+
+    async def test_duplicate_send_code_reuses_pending_login(self):
+        previous_api_id = main.API_ID
+        previous_api_hash = main.API_HASH
+        previous_client = main.login_client
+        previous_phone = main.login_phone
+        previous_hash = main.login_code_hash
+        previous_setup_token = main.SETUP_TOKEN
+        active_client = unittest.mock.Mock()
+        active_client.is_connected.return_value = True
+        main.API_ID = 123
+        main.API_HASH = "hash"
+        main.SETUP_TOKEN = "setup-test-token"
+        main.login_client = active_client
+        main.login_phone = "+998901234567"
+        main.login_code_hash = "pending-code"
+        try:
+            with patch.object(main, "TelegramClient") as telegram_client:
+                response = await main.send_code("setup-test-token", "+998901234567")
+            telegram_client.assert_not_called()
+            self.assertIn("Введите код из Telegram", response.body.decode())
+        finally:
+            main.API_ID = previous_api_id
+            main.API_HASH = previous_api_hash
+            main.SETUP_TOKEN = previous_setup_token
+            main.login_client = previous_client
+            main.login_phone = previous_phone
+            main.login_code_hash = previous_hash
+
     def test_setup_token_accepts_authorization_header(self):
         previous_setup_token = main.SETUP_TOKEN
         main.SETUP_TOKEN = "setup-test-token"
