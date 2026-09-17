@@ -42,6 +42,42 @@ CATEGORY_RULES = [
     ("Оборудование", ("банкомат", "терминал", "принтер", "сканер", "оборуд")),
 ]
 
+INQUIRY_MARKERS = (
+    "?",
+    "подскаж",
+    "помог",
+    "проверь",
+    "уточн",
+    "когда",
+    "почему",
+    "как ",
+    "где ",
+    "можно ли",
+    "нужно",
+    "нужен",
+    "нужна",
+    "не работает",
+    "не откры",
+    "не могу",
+    "ошиб",
+    "проблем",
+    "iltimos",
+    "yordam",
+    "qachon",
+    "qanday",
+    "nega",
+    "ishlam",
+    "xato",
+    "mumkinmi",
+)
+
+AUTOMATION_MARKERS = (
+    "смена открыта",
+    "смена закрыта",
+    "автоматическое сообщение",
+    "automatic message",
+)
+
 
 def _name(message: dict[str, Any]) -> str:
     return (
@@ -64,7 +100,43 @@ def _is_agent(message: dict[str, Any], config: ReportConfig) -> bool:
 
 def _is_service_message(message: dict[str, Any], config: ReportConfig) -> bool:
     username = _username(message)
-    return bool(username and username in config.service_bot_usernames)
+    return bool(message.get("is_bot")) or bool(
+        username and username in config.service_bot_usernames
+    )
+
+
+def _scope_reason(
+    message: dict[str, Any],
+    messages_by_id: dict[int, dict[str, Any]],
+    config: ReportConfig,
+) -> str:
+    """Classify one message for partner-support SLA scope."""
+    if _is_service_message(message, config):
+        return "automated"
+    if _is_agent(message, config):
+        return "support"
+    if not int(message.get("sender_id") or 0):
+        return "invalid"
+    text = str(message.get("text") or "").strip()
+    if not text:
+        return "non_inquiry"
+    value = text.lower().replace("ё", "е")
+    if any(marker in value for marker in AUTOMATION_MARKERS):
+        return "automated"
+
+    reply_id = int(message.get("reply_to_message_id") or 0)
+    replied = messages_by_id.get(reply_id)
+    if replied:
+        if _is_agent(replied, config):
+            return "eligible"
+        if not _is_service_message(replied, config):
+            return "partner_dialogue"
+
+    if any(f"@{username}" in value for username in config.agent_usernames):
+        return "eligible"
+    if any(marker in value for marker in INQUIRY_MARKERS):
+        return "eligible"
+    return "non_inquiry"
 
 
 def _canonical(text: str) -> str:
@@ -82,20 +154,30 @@ def _category(text: str) -> str:
     return "Другое"
 
 
-def build_tickets(messages: list[dict[str, Any]], config: ReportConfig) -> list[Ticket]:
+def build_tickets(
+    messages: list[dict[str, Any]],
+    config: ReportConfig,
+    classification: Counter[str] | None = None,
+) -> list[Ticket]:
     tickets: list[Ticket] = []
     by_message: dict[int, Ticket] = {}
     active: dict[int, Ticket] = {}
     gap = config.ticket_gap_minutes * 60
+    messages_by_id = {
+        int(message["message_id"]): message
+        for message in messages
+        if message.get("message_id")
+    }
 
     for message in messages:
-        if _is_service_message(message, config):
+        reason = _scope_reason(message, messages_by_id, config)
+        if classification is not None:
+            classification[reason] += 1
+        if reason in {"automated", "invalid", "partner_dialogue", "non_inquiry"}:
             continue
         sender_id = int(message.get("sender_id") or 0)
-        if not sender_id:
-            continue
         ts = int(message.get("ts") or 0)
-        if _is_agent(message, config):
+        if reason == "support":
             target = by_message.get(int(message.get("reply_to_message_id") or 0))
             if target is None:
                 unresolved = [t for t in tickets if t.first_response_at is None and t.opened_at <= ts]
@@ -130,8 +212,8 @@ def _percentile(values: list[float], p: float) -> float | None:
 
 
 def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[str, Any]:
-    effective_messages = [m for m in messages if not _is_service_message(m, config)]
-    tickets = build_tickets(effective_messages, config)
+    classification: Counter[str] = Counter()
+    tickets = build_tickets(messages, config, classification)
     responded = [t for t in tickets if t.response_minutes is not None]
     response_times = [t.response_minutes for t in responded if t.response_minutes is not None]
     sla_ok = [t for t in responded if (t.response_minutes or 0) <= config.sla_target_minutes]
@@ -148,7 +230,8 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
 
     for ticket in tickets:
         question = " ".join(str(m.get("text") or "") for m in ticket.messages).strip()
-        categories[_category(question)] += 1
+        category = _category(question)
+        categories[category] += 1
         key = _canonical(question)
         if key:
             questions[key] += 1
@@ -165,23 +248,42 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
             delays.append(ticket)
 
     delays.sort(key=lambda t: t.response_minutes or 0, reverse=True)
+    faq_covered = sum(count for label, count in categories.items() if label != "Другое")
+    total_tickets = len(tickets)
+    root_causes = [
+        {
+            "label": label,
+            "count": count,
+            "percent": count / total_tickets * 100 if total_tickets else 0.0,
+        }
+        for label, count in categories.most_common()
+    ]
     return {
         "tickets": tickets,
-        "total_tickets": len(tickets),
-        "total_messages": len(effective_messages),
+        "total_tickets": total_tickets,
+        "total_messages": sum(len(ticket.messages) for ticket in tickets),
         "responded": len(responded),
         "unanswered": len(unanswered),
         "sla_ok": len(sla_ok),
-        "sla_percent": (len(sla_ok) / len(responded) * 100) if responded else None,
+        "sla_breaches": total_tickets - len(sla_ok),
+        "sla_percent": (len(sla_ok) / total_tickets * 100) if total_tickets else None,
         "average_minutes": (sum(response_times) / len(response_times)) if response_times else None,
         "median_minutes": _percentile(response_times, 0.5),
         "p90_minutes": _percentile(response_times, 0.9),
+        "faq_covered": faq_covered,
+        "faq_coverage_percent": (faq_covered / total_tickets * 100) if total_tickets else None,
         "categories": categories.most_common(),
+        "root_causes": root_causes,
         "hourly": sorted(hourly.items()),
         "agents": agents.most_common(),
         "top_questions": [{"text": q_display[k], "count": c} for k, c in questions.most_common(7)],
         "top_solutions": [{"text": s_display[k], "count": c} for k, c in solutions.most_common(5)],
         "delays": delays[:7],
+        "excluded": {
+            "partner_dialogue": classification["partner_dialogue"],
+            "non_inquiry": classification["non_inquiry"],
+            "automated": classification["automated"],
+        },
         "agent_configured": bool(config.agent_ids or config.agent_usernames),
     }
 
@@ -196,10 +298,13 @@ def build_commentary(metrics: dict[str, Any], config: ReportConfig) -> str:
         return "За выбранную смену обращений не найдено."
     sla = metrics["sla_percent"]
     parts = [
-        "Не было обращений с зафиксированным ответом поддержки."
+        "Нет обращений, соответствующих критериям SLA."
         if sla is None
-        else f"SLA {'выполнен' if sla >= config.sla_target_percent else 'ниже цели'}: {sla:.1f}% при цели {config.sla_target_percent:.0f}%."
+        else f"Соблюдение SLA: {sla:.1f}% при нормативе ответа ≤ {config.sla_target_minutes} мин."
     ]
+    faq = metrics["faq_coverage_percent"]
+    if faq is not None:
+        parts.append(f"Покрытие FAQ: {faq:.1f}% обращений отнесено к известным темам.")
     if metrics["categories"]:
         label, count = metrics["categories"][0]
         parts.append(f"Главная тема — «{label}» ({count} обращ.).")

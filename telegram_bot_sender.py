@@ -48,11 +48,12 @@ class TelegramBotSender:
         )
 
     async def send_report(self, chat_id: int, paths: list[str], text: str) -> None:
-        await self.send_message(chat_id, text)
-        media = [
-            {"type": "photo", "media": f"attach://photo{index}"}
-            for index in range(len(paths))
-        ]
+        media = []
+        for index in range(len(paths)):
+            item = {"type": "photo", "media": f"attach://photo{index}"}
+            if index == 0:
+                item.update({"caption": text, "parse_mode": "HTML"})
+            media.append(item)
         with ExitStack() as stack:
             files = {
                 f"photo{index}": (

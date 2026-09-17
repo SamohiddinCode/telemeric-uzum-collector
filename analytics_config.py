@@ -13,12 +13,13 @@ class ReportConfig:
     workday_start: str = "10:00"
     workday_end: str = "19:00"
     report_time: str = "19:01"
-    sla_target_minutes: int = 15
+    sla_target_minutes: int = 5
     sla_target_percent: float = 90.0
     ticket_gap_minutes: int = 30
     agent_ids: set[int] = field(default_factory=set)
     agent_usernames: set[str] = field(default_factory=set)
     service_bot_usernames: set[str] = field(default_factory=set)
+    report_mentions: tuple[str, ...] = ("@Ddmit05",)
 
     @classmethod
     def from_env(cls, source_chat_id: int) -> "ReportConfig":
@@ -37,6 +38,11 @@ class ReportConfig:
             for v in os.getenv("SERVICE_BOT_USERNAMES", "opening_closing_bot").split(",")
             if v.strip()
         }
+        report_mentions = tuple(
+            "@" + value.strip().lstrip("@")
+            for value in os.getenv("REPORT_MENTIONS", "Ddmit05").split(",")
+            if value.strip()
+        )
         return cls(
             source_chat_id=source_chat_id,
             report_chat_id=int(os.getenv("REPORT_CHAT_ID", "8419189523")),
@@ -45,10 +51,11 @@ class ReportConfig:
             workday_start=os.getenv("WORKDAY_START", "10:00"),
             workday_end=os.getenv("WORKDAY_END", "19:00"),
             report_time=os.getenv("REPORT_TIME", "19:01"),
-            sla_target_minutes=int(os.getenv("SLA_TARGET_MINUTES", "15")),
+            sla_target_minutes=int(os.getenv("SLA_TARGET_MINUTES", "5")),
             sla_target_percent=float(os.getenv("SLA_TARGET_PERCENT", "90")),
             ticket_gap_minutes=int(os.getenv("TICKET_GAP_MINUTES", "30")),
             agent_ids=ids,
             agent_usernames=usernames,
             service_bot_usernames=service_bots,
+            report_mentions=report_mentions,
         )

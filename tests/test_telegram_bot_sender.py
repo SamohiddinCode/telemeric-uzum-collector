@@ -26,11 +26,11 @@ class TelegramBotSenderTests(unittest.IsolatedAsyncioTestCase):
                 await sender.send_report(8419189523, paths, "<b>Test report</b>")
 
         self.assertEqual([path for path, _ in calls], [
-            "/bottest-token/sendMessage",
             "/bottest-token/sendMediaGroup",
         ])
         self.assertIn(b"8419189523", calls[0][1])
-        self.assertEqual(calls[1][1].count(b"fake-png"), 3)
+        self.assertIn(b"Test report", calls[0][1])
+        self.assertEqual(calls[0][1].count(b"fake-png"), 3)
 
     async def test_check_chat(self):
         async def handler(_request):

@@ -29,7 +29,7 @@ services:
       - key: REPORT_TIME
         value: 19:01
       - key: SLA_TARGET_MINUTES
-        value: 15
+        value: 5
       - key: SLA_TARGET_PERCENT
         value: 90
       - key: TICKET_GAP_MINUTES
@@ -38,6 +38,8 @@ services:
         value: uzum_franchise
       - key: SERVICE_BOT_USERNAMES
         value: opening_closing_bot
+      - key: REPORT_MENTIONS
+        value: "@Ddmit05"
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH

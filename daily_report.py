@@ -113,13 +113,33 @@ class DailyReportService:
                 else f"{metrics['median_minutes']:.1f} мин"
             )
             source_label = "по сообщениям бота" if metrics["shift_source"] == "opening_closing_bot" else "по расписанию"
+            faq = (
+                "—"
+                if metrics["faq_coverage_percent"] is None
+                else f"{metrics['faq_coverage_percent']:.1f}%"
+            )
+            causes = ", ".join(
+                f"{item['label']} — {item['count']}"
+                for item in metrics["root_causes"][:3]
+            ) or "нет квалифицированных обращений"
+            mentions = " ".join(self.config.report_mentions)
             caption = (
-                f"📊 <b>Daily SLA Report — {day.strftime('%d.%m.%Y')}</b>\n"
+                f"{mentions}\n"
+                f"📊 <b>Отчёт SLA — {day.strftime('%d.%m.%Y')}</b>\n"
                 f"🕒 Смена: <b>{metrics['shift_start']}–{metrics['shift_end']}</b> ({source_label})\n\n"
-                f"Обращения: <b>{metrics['total_tickets']}</b>\n"
-                f"SLA Compliance: <b>{sla}</b>\n"
-                f"Median Response: <b>{median}</b>\n"
-                f"Без ответа: <b>{metrics['unanswered']}</b>\n\n"
+                f"Обращения партнёров: <b>{metrics['total_tickets']}</b>\n"
+                f"Соблюдение SLA ≤ {self.config.sla_target_minutes} мин: <b>{sla}</b> "
+                f"({metrics['sla_ok']} вовремя из {metrics['total_tickets']})\n"
+                f"Медиана первого ответа: <b>{median}</b>\n"
+                f"Покрытие FAQ: <b>{faq}</b>\n"
+                f"Без ответа: <b>{metrics['unanswered']}</b>\n"
+                f"Корневые причины: {causes}\n\n"
+                "<b>Критерии расчёта</b>\n"
+                "• Включены только вопросы/просьбы партнёров к поддержке.\n"
+                "• Исключены диалоги партнёров между собой, не-обращения и автоматические сообщения.\n"
+                f"• SLA % = ответы ≤ {self.config.sla_target_minutes} мин / все квалифицированные обращения × 100%.\n"
+                "• Медиана считается только по обращениям с зафиксированным ответом.\n"
+                "• FAQ Coverage — доля обращений, отнесённых к известной теме.\n\n"
                 f"💬 {commentary}"
             )
             if hasattr(client, "send_report"):

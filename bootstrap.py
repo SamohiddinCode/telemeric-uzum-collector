@@ -111,6 +111,11 @@ async def analytics_status(
             "responded": metrics["responded"],
             "unanswered": metrics["unanswered"],
             "slaPercent": metrics["sla_percent"],
+            "slaCompliant": metrics["sla_ok"],
+            "medianResponseMinutes": metrics["median_minutes"],
+            "faqCoveragePercent": metrics["faq_coverage_percent"],
+            "rootCauses": metrics["root_causes"][:5],
+            "excluded": metrics["excluded"],
         },
     }
 
@@ -139,6 +144,8 @@ async def analytics_report_now(
         "reportChatId": report_config.report_chat_id,
         "tickets": metrics.get("total_tickets", 0),
         "slaPercent": metrics.get("sla_percent"),
+        "medianResponseMinutes": metrics.get("median_minutes"),
+        "faqCoveragePercent": metrics.get("faq_coverage_percent"),
         "unanswered": metrics.get("unanswered", 0),
     }
 

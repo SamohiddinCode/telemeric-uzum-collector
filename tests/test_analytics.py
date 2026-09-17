@@ -35,12 +35,33 @@ class AnalyticsTests(unittest.TestCase):
         metrics = build_metrics(self.messages, self.config)
         self.assertEqual(
             (metrics["total_tickets"], metrics["responded"], metrics["unanswered"], metrics["sla_ok"]),
-            (3, 2, 1, 1),
+            (3, 2, 1, 0),
         )
-        self.assertEqual(metrics["total_messages"], 6)
-        self.assertAlmostEqual(metrics["sla_percent"], 50.0)
+        self.assertEqual(metrics["total_messages"], 4)
+        self.assertAlmostEqual(metrics["sla_percent"], 0.0)
         self.assertAlmostEqual(metrics["median_minutes"], 18.5)
+        self.assertAlmostEqual(metrics["faq_coverage_percent"], 100.0)
         self.assertTrue(metrics["agent_configured"])
+
+    def test_sla_scope_excludes_partner_dialogue_chatter_and_automation(self):
+        messages = [
+            {"message_id": 20, "ts": self.ts(10, 0), "sender_id": 200, "sender_name": "Partner A", "username": "pa", "text": "@uzum_franchise, подскажите по выплате?", "reply_to_message_id": None},
+            {"message_id": 21, "ts": self.ts(10, 1), "sender_id": 201, "sender_name": "Partner B", "username": "pb", "text": "У меня тоже", "reply_to_message_id": 20},
+            {"message_id": 22, "ts": self.ts(10, 2), "sender_id": 202, "sender_name": "Partner C", "username": "pc", "text": "Добрый день всем", "reply_to_message_id": None},
+            {"message_id": 23, "ts": self.ts(10, 3), "sender_id": 700, "sender_name": "Bot", "username": "other_bot", "is_bot": True, "text": "Автоматическое сообщение", "reply_to_message_id": None},
+            {"message_id": 24, "ts": self.ts(10, 4), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Проверяем", "reply_to_message_id": 20},
+            {"message_id": 25, "ts": self.ts(11, 0), "sender_id": 203, "sender_name": "Partner D", "username": "pd", "text": "Почему приложение не работает?", "reply_to_message_id": None},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["total_tickets"], 2)
+        self.assertEqual(metrics["sla_ok"], 1)
+        self.assertEqual(metrics["unanswered"], 1)
+        self.assertAlmostEqual(metrics["sla_percent"], 50.0)
+        self.assertEqual(metrics["excluded"], {
+            "partner_dialogue": 1,
+            "non_inquiry": 1,
+            "automated": 1,
+        })
 
     def test_shift_bot_sets_report_window(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -87,6 +108,46 @@ class AnalyticsTests(unittest.TestCase):
             renderer.details(metrics, self.config, date(2026, 9, 16), paths[2])
             for path in paths:
                 self.assertGreater(Path(path).stat().st_size, 1000)
+
+
+class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_caption_is_russian_attached_and_explains_scope(self):
+        config = ReportConfig(
+            -1002707306458,
+            8419189523,
+            agent_usernames={"uzum_franchise"},
+            service_bot_usernames={"opening_closing_bot"},
+        )
+        tz = ZoneInfo("Asia/Tashkent")
+        opened = int(datetime(2026, 9, 17, 10, 0, tzinfo=tz).timestamp())
+        answered = int(datetime(2026, 9, 17, 10, 4, tzinfo=tz).timestamp())
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = MessageStore(str(Path(tmp) / "analytics.sqlite3"))
+            store.record_updates([
+                {"message": {"message_id": 1, "date": opened, "text": "Когда будет выплата?", "chat": {"id": config.source_chat_id}, "from": {"id": 100, "first_name": "Partner", "username": "partner", "is_bot": False}}},
+                {"message": {"message_id": 2, "date": answered, "text": "Сегодня", "chat": {"id": config.source_chat_id}, "from": {"id": 900, "first_name": "Support", "username": "uzum_franchise", "is_bot": False}, "reply_to_message": {"message_id": 1}}},
+            ])
+
+            class Client:
+                captured = None
+
+                async def send_report(self, chat_id, paths, caption):
+                    self.captured = (chat_id, len(paths), caption, all(Path(p).exists() for p in paths))
+
+            client = Client()
+            result = await DailyReportService(store, config).send_day(client, date(2026, 9, 17), force=True)
+
+        self.assertTrue(result["sent"])
+        self.assertEqual(client.captured[:2], (8419189523, 3))
+        self.assertTrue(client.captured[3])
+        caption = client.captured[2]
+        self.assertLessEqual(len(caption), 1024)
+        self.assertIn("@Ddmit05", caption)
+        self.assertIn("Соблюдение SLA ≤ 5 мин", caption)
+        self.assertIn("Покрытие FAQ", caption)
+        self.assertIn("Корневые причины", caption)
+        self.assertIn("Исключены диалоги партнёров", caption)
 
 
 if __name__ == "__main__":
