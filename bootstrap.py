@@ -13,12 +13,14 @@ import main as collector
 from analytics_config import ReportConfig
 from analytics_store import MessageStore
 from daily_report import DailyReportService
+from telegram_bot_sender import TelegramBotSender
 
 
 logger = logging.getLogger("telemeric.analytics")
 report_config = ReportConfig.from_env(collector.TARGET_CHAT_ID)
 message_store = MessageStore(os.getenv("ANALYTICS_DB_PATH", "/tmp/telemeric/analytics.sqlite3"))
 report_service = DailyReportService(message_store, report_config)
+bot_sender = TelegramBotSender(collector.TELEGRAM_BOT_TOKEN) if collector.TELEGRAM_BOT_TOKEN else None
 
 _original_deliver = collector.deliver
 _original_lifespan = collector.app.router.lifespan_context
@@ -35,6 +37,9 @@ async def deliver_with_analytics(updates):
 
 async def report_runner() -> None:
     while True:
+        if bot_sender:
+            await report_service.run(bot_sender)
+            return
         client = collector.collector_client
         if client and client.is_connected() and collector.collector_status.get("connected"):
             await report_service.run(client)
@@ -87,6 +92,7 @@ async def analytics_status(
     metrics = report_service.metrics_for_day(target_day)
     return {
         "enabled": report_config.enabled,
+        "deliveryMode": "bot" if bot_sender else "user-session",
         "sourceChatId": report_config.source_chat_id,
         "reportChatId": report_config.report_chat_id,
         "timezone": report_config.timezone,
@@ -116,9 +122,12 @@ async def analytics_report_now(
     authorization: str = Header(default=""),
 ):
     collector.require_setup_token(token, authorization)
-    client = collector.collector_client
-    if not client or not client.is_connected() or not collector.collector_status.get("connected"):
-        raise HTTPException(status_code=503, detail="Telegram collector is not connected")
+    client = bot_sender or collector.collector_client
+    if not client or (
+        not bot_sender
+        and (not client.is_connected() or not collector.collector_status.get("connected"))
+    ):
+        raise HTTPException(status_code=503, detail="Telegram report sender is not connected")
     target_day = parse_report_date(date)
     result = await report_service.send_day(client, target_day, force=True)
     metrics = result.get("metrics") or {}
@@ -132,3 +141,18 @@ async def analytics_report_now(
         "slaPercent": metrics.get("sla_percent"),
         "unanswered": metrics.get("unanswered", 0),
     }
+
+
+@app.get("/analytics/check-recipient")
+async def analytics_check_recipient(
+    token: str = Query(default=""),
+    authorization: str = Header(default=""),
+):
+    collector.require_setup_token(token, authorization)
+    if not bot_sender:
+        raise HTTPException(status_code=503, detail="Telegram bot sender is not configured")
+    try:
+        chat = await bot_sender.check_chat(report_config.report_chat_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"reachable": True, "chat": chat}

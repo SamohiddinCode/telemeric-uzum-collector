@@ -14,9 +14,11 @@ Required service secrets:
   `telegram-usedesk-bridge` service. The bridge keeps ownership of the Telegram
   webhook; the collector never replaces it.
 
-The Telegram StringSession is encrypted with a key derived from
-`TELEGRAM_COLLECTOR_SECRET` before it is stored in the Site database. The Site
-stores only encrypted ciphertext.
+When `TELEGRAM_BOT_TOKEN` is configured, new messages arrive through the
+existing bridge and reports are sent with that service bot. A Telegram user
+session is then optional and is needed only for an automatic history backfill.
+The Telegram StringSession, when used, is encrypted with a key derived from
+`TELEGRAM_COLLECTOR_SECRET` before it is stored in the Site database.
 
 After deploy, open `/setup?token=<SETUP_TOKEN>`, enter the Telegram phone
 number, and complete the one-time Telegram verification in the page. Do not
@@ -58,6 +60,7 @@ Protected operator endpoints:
 
 - `GET /analytics/status` with `Authorization: Bearer <SETUP_TOKEN>` — preview counters/config.
 - `POST /analytics/report-now` with the same header — force a test report immediately.
+- `GET /analytics/check-recipient` with the same header — verify that the report bot can reach the configured recipient without sending a message.
 
 The legacy `?token=` form remains available for the browser setup page, but
 operator API calls should use the authorization header so secrets do not enter

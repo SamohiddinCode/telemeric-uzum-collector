@@ -106,7 +106,6 @@ class DailyReportService:
             self.renderer.summary(metrics, self.config, day, paths[0])
             self.renderer.charts(metrics, self.config, day, paths[1])
             self.renderer.details(metrics, self.config, day, paths[2])
-            target = await client.get_entity(self.config.report_chat_id)
             sla = "—" if metrics["sla_percent"] is None else f"{metrics['sla_percent']:.1f}%"
             median = (
                 "—"
@@ -123,12 +122,16 @@ class DailyReportService:
                 f"Без ответа: <b>{metrics['unanswered']}</b>\n\n"
                 f"💬 {commentary}"
             )
-            try:
-                await client.send_file(target, paths, caption=caption, parse_mode="html")
-            except Exception:
-                await client.send_message(target, caption, parse_mode="html")
-                for path in paths:
-                    await client.send_file(target, path)
+            if hasattr(client, "send_report"):
+                await client.send_report(self.config.report_chat_id, paths, caption)
+            else:
+                target = await client.get_entity(self.config.report_chat_id)
+                try:
+                    await client.send_file(target, paths, caption=caption, parse_mode="html")
+                except Exception:
+                    await client.send_message(target, caption, parse_mode="html")
+                    for path in paths:
+                        await client.send_file(target, path)
         self.last_sent_day = day
         return {"sent": True, "metrics": metrics}
 
