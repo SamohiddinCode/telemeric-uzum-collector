@@ -26,6 +26,40 @@ _original_deliver = collector.deliver
 _original_lifespan = collector.app.router.lifespan_context
 
 
+async def refresh_analytics_cache(day) -> int:
+    """Refresh one local report day from the durable Site message store."""
+    tz = ZoneInfo(report_config.timezone)
+    start = datetime.combine(day, datetime.min.time(), tzinfo=tz)
+    end = datetime.combine(day, datetime.max.time(), tzinfo=tz)
+    payload = await collector.site_request(
+        "GET",
+        f"/api/telegram/analytics-export?from={int(start.timestamp())}&to={int(end.timestamp()) + 1}",
+    )
+    rows = payload.get("messages") or []
+    updates = []
+    for row in rows:
+        sender_id = int(row.get("sender_id") or 0)
+        automated = sender_id == 777000 or str(row.get("sender_name") or "").lower() == "telegram"
+        support = bool(row.get("is_staff")) and not automated
+        message = {
+            "message_id": int(row.get("telegram_message_id") or 0),
+            "date": int(row.get("sent_at") or 0),
+            "text": str(row.get("text") or ""),
+            "chat": {"id": int(row.get("chat_id") or 0), "type": "supergroup"},
+            "from": {
+                "id": sender_id,
+                "first_name": str(row.get("sender_name") or ""),
+                "username": "uzum_franchise" if support else ("telegram_service" if automated else ""),
+                "is_bot": automated,
+            },
+        }
+        if row.get("reply_to_message_id"):
+            message["reply_to_message"] = {"message_id": int(row["reply_to_message_id"])}
+        updates.append({"update_id": message["message_id"], "message": message})
+    message_store.record_updates(updates)
+    return len(updates)
+
+
 async def deliver_with_analytics(updates):
     """Preserve existing site delivery, then mirror data into analytics cache."""
     await _original_deliver(updates)
@@ -36,6 +70,10 @@ async def deliver_with_analytics(updates):
 
 
 async def report_runner() -> None:
+    try:
+        await refresh_analytics_cache(datetime.now(ZoneInfo(report_config.timezone)).date())
+    except Exception:
+        logger.exception("Analytics cache refresh failed; continuing with live bridge data")
     while True:
         if bot_sender:
             await report_service.run(bot_sender)
@@ -89,6 +127,10 @@ async def analytics_status(
 ):
     collector.require_setup_token(token, authorization)
     target_day = parse_report_date(date)
+    try:
+        await refresh_analytics_cache(target_day)
+    except Exception:
+        logger.exception("Analytics status refresh failed")
     metrics = report_service.metrics_for_day(target_day)
     return {
         "enabled": report_config.enabled,
@@ -156,6 +198,10 @@ async def analytics_report_now(
     ):
         raise HTTPException(status_code=503, detail="Telegram report sender is not connected")
     target_day = parse_report_date(date)
+    try:
+        await refresh_analytics_cache(target_day)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Не удалось обновить данные: {exc}") from exc
     result = await report_service.send_day(client, target_day, force=True)
     metrics = result.get("metrics") or {}
     return {

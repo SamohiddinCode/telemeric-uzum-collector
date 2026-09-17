@@ -98,6 +98,17 @@ class AnalyticsTests(unittest.TestCase):
             self.assertEqual(metrics["shift_source"], "opening_closing_bot")
             self.assertEqual(metrics["total_tickets"], 1)
 
+    def test_support_reply_to_another_message_does_not_close_latest_ticket(self):
+        messages = [
+            {"message_id": 30, "ts": self.ts(10, 0), "sender_id": 300, "sender_name": "Partner A", "username": "a", "text": "Почему приложение не работает?", "reply_to_message_id": None},
+            {"message_id": 31, "ts": self.ts(10, 1), "sender_id": 301, "sender_name": "Partner B", "username": "b", "text": "Добрый день", "reply_to_message_id": None},
+            {"message_id": 32, "ts": self.ts(10, 4), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Ответ другому участнику", "reply_to_message_id": 31},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["total_tickets"], 1)
+        self.assertEqual(metrics["responded"], 0)
+        self.assertEqual(metrics["unanswered"], 1)
+
     def test_render(self):
         metrics = build_metrics(self.messages, self.config)
         renderer = ReportRenderer()

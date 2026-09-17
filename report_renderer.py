@@ -204,7 +204,7 @@ class ReportRenderer:
                 y += 27
             y += 18
 
-        self.card(draw, (800, 195, 1530, 535))
+        self.card(draw, (800, 195, 1530, 490))
         draw.text((830, 225), "Анализ корневых причин", font=self.font(28), fill=self.TEXT)
         y = 280
         causes = m["root_causes"][:5] or [{"label": "Нет квалифицированных обращений", "count": 0, "percent": 0.0}]
@@ -213,27 +213,37 @@ class ReportRenderer:
             draw.text((1330, y), f"{item['count']} · {item['percent']:.1f}%", font=self.font(18), fill=self.PURPLE)
             y += 48
 
-        self.card(draw, (800, 575, 1530, 905))
-        draw.text((830, 605), f"Нарушения SLA > {c.sla_target_minutes} мин", font=self.font(28), fill=self.TEXT)
-        y = 660
+        self.card(draw, (800, 520, 1530, 920))
+        draw.text((830, 550), "Нарушения SLA", font=self.font(28), fill=self.TEXT)
+        draw.text(
+            (830, 592),
+            f"Ответ позже {c.sla_target_minutes} мин",
+            font=self.font(19),
+            fill=self.RED,
+        )
+        y = 630
         delays: list[Ticket] = m["delays"]
         if not delays:
-            draw.text((830, y), "Критичных просрочек не найдено", font=self.font(21), fill=self.GREEN)
-        for ticket in delays[:5]:
+            draw.text((830, y), "Просрочек с ответом не найдено", font=self.font(19), fill=self.GREEN)
+            y += 42
+        for ticket in delays[:4]:
             draw.text(
                 (830, y),
                 f"#{ticket.id} · {ticket.customer_name[:18]} · {(ticket.response_minutes or 0):.1f} мин",
-                font=self.font(19),
-                fill=self.RED,
-            )
-            question = " ".join(str(x.get("text") or "") for x in ticket.messages)
-            draw.text((850, y + 28), self.wrap(question, 62)[0], font=self.font(16), fill=self.MUTED)
-            y += 67
-        if m["unanswered"]:
-            draw.text(
-                (830, min(y + 12, 855)),
-                f"Без первого ответа: {m['unanswered']} — считаются нарушением SLA",
                 font=self.font(18),
                 fill=self.RED,
             )
+            question = " ".join(str(x.get("text") or "") for x in ticket.messages)
+            draw.text((850, y + 27), self.wrap(question, 66)[0], font=self.font(15), fill=self.MUTED)
+            y += 57
+        if len(delays) > 4:
+            draw.text((850, y), f"Ещё просрочек с ответом: {len(delays) - 4}", font=self.font(16), fill=self.MUTED)
+            y += 30
+        unanswered_y = max(y + 8, 845)
+        draw.text(
+            (830, unanswered_y),
+            f"Без первого ответа: {m['unanswered']} — также нарушение SLA",
+            font=self.font(18),
+            fill=self.RED if m["unanswered"] else self.GREEN,
+        )
         image.save(out, "PNG", optimize=True)

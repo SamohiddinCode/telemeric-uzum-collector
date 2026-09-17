@@ -179,15 +179,12 @@ def build_tickets(
         ts = int(message.get("ts") or 0)
         if reason == "support":
             target = by_message.get(int(message.get("reply_to_message_id") or 0))
-            if target is None:
-                unresolved = [t for t in tickets if t.first_response_at is None and t.opened_at <= ts]
-                target = max(unresolved, key=lambda t: t.last_customer_at) if unresolved else None
             if target and target.first_response_at is None:
                 target.first_response_at = ts
                 target.first_response_text = str(message.get("text") or "")
                 target.agent_id = sender_id
                 target.agent_name = _name(message)
-                target.response_inferred = not bool(message.get("reply_to_message_id"))
+                target.response_inferred = False
             continue
 
         ticket = active.get(sender_id)
