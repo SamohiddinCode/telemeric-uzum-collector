@@ -2,6 +2,7 @@ import asyncio
 import base64
 import hashlib
 import html
+import io
 import os
 import secrets
 import signal
@@ -11,11 +12,12 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
+import qrcode
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError
+from telethon.errors import PhonePasswordFloodError, SessionPasswordNeededError
 from telethon.sessions import StringSession
 from telethon.tl.types import Channel, User
 from telethon.utils import get_peer_id
@@ -38,6 +40,9 @@ login_client: TelegramClient | None = None
 login_phone = ""
 login_code_hash = ""
 login_lock = asyncio.Lock()
+qr_login: Any | None = None
+qr_wait_task: asyncio.Task[Any] | None = None
+qr_login_status: dict[str, str] = {"state": "idle", "error": ""}
 collector_status: dict[str, Any] = {
     "authorized": False,
     "connected": False,
@@ -363,7 +368,10 @@ def require_setup_token(token: str, authorization: str = "") -> None:
 
 
 def page(title: str, body: str) -> HTMLResponse:
-    return HTMLResponse(f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>body{{margin:0;background:#f5f4fb;color:#171b2e;font:16px system-ui}}main{{max-width:520px;margin:8vh auto;padding:32px;background:#fff;border:1px solid #e6e2f1;border-radius:24px;box-shadow:0 18px 60px #49208018}}h1{{margin:0 0 8px}}p{{color:#667085;line-height:1.55}}label{{display:block;margin:18px 0 6px;font-weight:700}}input{{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d8d2e6;border-radius:12px;font:inherit}}button{{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font:700 16px system-ui;cursor:pointer}}.ok{{padding:14px;background:#eafaf3;color:#107458;border-radius:12px}}.error{{padding:14px;background:#fff4ea;color:#a34c00;border-radius:12px}}</style></head><body><main>{body}</main></body></html>""")
+    return HTMLResponse(
+        f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>body{{margin:0;background:#f5f4fb;color:#171b2e;font:16px system-ui}}main{{max-width:520px;margin:8vh auto;padding:32px;background:#fff;border:1px solid #e6e2f1;border-radius:24px;box-shadow:0 18px 60px #49208018}}h1{{margin:0 0 8px}}p{{color:#667085;line-height:1.55}}label{{display:block;margin:18px 0 6px;font-weight:700}}input{{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d8d2e6;border-radius:12px;font:inherit}}button{{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font:700 16px system-ui;cursor:pointer}}.ok{{padding:14px;background:#eafaf3;color:#107458;border-radius:12px}}.error{{padding:14px;background:#fff4ea;color:#a34c00;border-radius:12px}}</style></head><body><main>{body}</main></body></html>""",
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+    )
 
 
 def code_form(token: str, phone: str) -> HTMLResponse:
@@ -376,6 +384,64 @@ def code_form(token: str, phone: str) -> HTMLResponse:
         "<label>Облачный пароль (если есть)</label><input name='password' type='password'>"
         "<button type='submit'>Подключить аккаунт</button></form>",
     )
+
+
+def qr_image_data(value: str) -> str:
+    image = qrcode.make(value)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def qr_page(token: str, url: str) -> HTMLResponse:
+    safe_token = html.escape(token)
+    image = qr_image_data(url)
+    return page(
+        "Вход по QR-коду",
+        "<h1>Подключение по QR-коду</h1>"
+        "<p>В Telegram на телефоне откройте <b>Настройки → Устройства → Подключить устройство</b> и отсканируйте этот код.</p>"
+        f"<img src='{image}' alt='QR-код Telegram' style='display:block;width:min(100%,320px);margin:24px auto'>"
+        "<p id='status' class='ok'>Ожидаю сканирование…</p>"
+        f"<script>const token={json.dumps(token)};const status=document.getElementById('status');"
+        "const poll=setInterval(async()=>{try{const response=await fetch('/setup/qr-status?token='+encodeURIComponent(token),{cache:'no-store'});"
+        "const data=await response.json();if(data.state==='done'){clearInterval(poll);location.href='/setup?token='+encodeURIComponent(token)}"
+        "else if(data.state==='password'){clearInterval(poll);location.href='/setup/qr-password?token='+encodeURIComponent(token)}"
+        "else if(data.state==='error'){clearInterval(poll);status.className='error';status.textContent=data.error||'QR-код истёк';}"
+        "}catch(error){status.className='error';status.textContent='Не удалось проверить состояние подключения';}},2000);</script>"
+        f"<p><a href='/setup/qr?token={safe_token}'>Создать новый QR-код</a></p>",
+    )
+
+
+async def finish_login(client: TelegramClient) -> None:
+    global login_client
+    session = client.session.save()
+    await save_session(session)
+    if client.is_connected():
+        await client.disconnect()
+    if login_client is client:
+        login_client = None
+    qr_login_status.update(state="done", error="")
+    if TELEGRAM_BOT_TOKEN:
+        start_history_backfill(session, keep_connected=True)
+    else:
+        await start_saved_collector()
+
+
+async def wait_for_qr_login(client: TelegramClient, pending_qr: Any) -> None:
+    try:
+        await pending_qr.wait(timeout=120)
+    except SessionPasswordNeededError:
+        qr_login_status.update(state="password", error="")
+        return
+    except asyncio.TimeoutError:
+        qr_login_status.update(state="error", error="QR-код истёк. Создайте новый код.")
+    except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
+        qr_login_status.update(state="error", error=f"Telegram отклонил QR-вход ({type(exc).__name__}).")
+    else:
+        await finish_login(client)
+        return
+    if client.is_connected():
+        await client.disconnect()
 
 
 @asynccontextmanager
@@ -399,6 +465,8 @@ async def lifespan(_: FastAPI):
         await collector_client.disconnect()
     if backfill_task:
         backfill_task.cancel()
+    if qr_wait_task:
+        qr_wait_task.cancel()
 
 
 app = FastAPI(title="Telemeric Uzum Collector", lifespan=lifespan)
@@ -460,7 +528,67 @@ async def setup(token: str = Query(default="")) -> HTMLResponse:
         return page("Импорт истории", "<h1>История загружается</h1><p class='ok'>Можно закрыть страницу. Импорт продолжится в фоне.</p>")
     description = "Введите номер аккаунта, который уже состоит в нужной группе. Он будет использован только для однократной загрузки старой истории." if TELEGRAM_BOT_TOKEN else "Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны."
     upload = f"<hr><h2>Или загрузите экспорт</h2><p>Поддерживается JSON из Telegram Desktop.</p><form method='post' action='/setup/import-json' enctype='multipart/form-data'><input type='hidden' name='token' value='{html.escape(token)}'><input name='file' type='file' accept='.json,application/json' required><button type='submit'>Загрузить историю JSON</button></form>"
-    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code' onsubmit=\"const button=this.querySelector('button');button.disabled=true;button.textContent='Отправляем код…'\"><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>{upload}")
+    qr = f"<a href='/setup/qr?token={html.escape(token)}' style='display:block;text-align:center;margin-top:18px'>Войти по QR-коду без SMS</a>"
+    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code' onsubmit=\"const button=this.querySelector('button');button.disabled=true;button.textContent='Отправляем код…'\"><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>{qr}{upload}")
+
+
+@app.get("/setup/qr", response_class=HTMLResponse)
+async def setup_qr(token: str = Query(default="")) -> HTMLResponse:
+    global login_client, login_phone, login_code_hash, qr_login, qr_wait_task
+    require_setup_token(token)
+    if not API_ID or not API_HASH:
+        return page("Нет API-настроек", "<h1>Нужны Telegram API ID и API Hash</h1><p class='error'>Сначала заполните секреты сервиса в Render.</p>")
+    async with login_lock:
+        if qr_wait_task and not qr_wait_task.done() and qr_login and qr_login_status["state"] == "waiting":
+            return qr_page(token, qr_login.url)
+        if login_client and login_client.is_connected():
+            await login_client.disconnect()
+        login_phone = ""
+        login_code_hash = ""
+        login_client = TelegramClient(StringSession(), API_ID, API_HASH)
+        await login_client.connect()
+        qr_login = await login_client.qr_login()
+        qr_login_status.update(state="waiting", error="")
+        qr_wait_task = asyncio.create_task(wait_for_qr_login(login_client, qr_login))
+        return qr_page(token, qr_login.url)
+
+
+@app.get("/setup/qr-status")
+async def setup_qr_status(token: str = Query(default="")) -> dict[str, str]:
+    require_setup_token(token)
+    return dict(qr_login_status)
+
+
+@app.get("/setup/qr-password", response_class=HTMLResponse)
+async def setup_qr_password(token: str = Query(default="")) -> HTMLResponse:
+    require_setup_token(token)
+    if qr_login_status["state"] != "password":
+        return page("QR-вход не активен", f"<h1>Сначала отсканируйте QR-код</h1><a href='/setup/qr?token={html.escape(token)}'>Открыть QR-код</a>")
+    return page(
+        "Облачный пароль Telegram",
+        "<h1>Введите облачный пароль Telegram</h1><p>Он нужен только для завершения QR-входа.</p>"
+        f"<form method='post' action='/setup/qr-password'><input type='hidden' name='token' value='{html.escape(token)}'>"
+        "<label>Облачный пароль</label><input name='password' type='password' autocomplete='current-password' required>"
+        "<button type='submit'>Завершить подключение</button></form>",
+    )
+
+
+@app.post("/setup/qr-password", response_class=HTMLResponse)
+async def verify_qr_password(token: str = Form(...), password: str = Form(...)) -> HTMLResponse:
+    require_setup_token(token)
+    if not login_client or not login_client.is_connected() or qr_login_status["state"] != "password":
+        return page("Сессия истекла", f"<h1>Начните заново</h1><a href='/setup/qr?token={html.escape(token)}'>Открыть новый QR-код</a>")
+    try:
+        await login_client.sign_in(password=password)
+    except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
+        return page(
+            "Пароль не принят",
+            "<h1>Telegram не принял пароль</h1>"
+            f"<p class='error'>{html.escape(type(exc).__name__)}</p>"
+            f"<a href='/setup/qr-password?token={html.escape(token)}'>Попробовать снова</a>",
+        )
+    await finish_login(login_client)
+    return page("Готово", "<h1>Аккаунт подключён</h1><p class='ok'>Импорт истории запущен.</p>")
 
 
 @app.post("/setup/import-json", response_class=HTMLResponse)
@@ -502,6 +630,18 @@ async def send_code(token: str = Form(...), phone: str = Form(...)) -> HTMLRespo
         try:
             await login_client.connect()
             sent = await login_client.send_code_request(phone)
+        except PhonePasswordFloodError:
+            if login_client.is_connected():
+                await login_client.disconnect()
+            login_client = None
+            login_phone = ""
+            login_code_hash = ""
+            return page(
+                "Лимит Telegram",
+                "<h1>Telegram временно ограничил вход по коду</h1>"
+                "<p class='error'>Лимит попыток действует до следующего дня. Не запрашивайте новые коды сейчас.</p>"
+                f"<a href='/setup/qr?token={html.escape(token)}'>Войти по QR-коду без SMS</a>",
+            )
         except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
             if login_client.is_connected():
                 await login_client.disconnect()
@@ -511,7 +651,7 @@ async def send_code(token: str = Form(...), phone: str = Form(...)) -> HTMLRespo
             return page(
                 "Не удалось отправить код",
                 "<h1>Код пока не отправлен</h1>"
-                f"<p class='error'>Telegram отклонил подключение ({html.escape(type(exc).__name__)}). Подождите минуту и попробуйте ещё раз.</p>"
+                f"<p class='error'>Telegram отклонил подключение ({html.escape(type(exc).__name__)}).</p>"
                 f"<a href='/setup?token={html.escape(token)}'>Вернуться к подключению</a>",
             )
         login_phone = phone

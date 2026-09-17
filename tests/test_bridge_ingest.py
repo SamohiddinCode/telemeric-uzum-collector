@@ -67,6 +67,7 @@ class BridgeIngestTests(unittest.IsolatedAsyncioTestCase):
             body = response.body.decode()
             self.assertIn("button.disabled=true", body)
             self.assertIn("Отправляем код…", body)
+            self.assertIn("Войти по QR-коду без SMS", body)
         finally:
             main.SETUP_TOKEN = previous_setup_token
 
