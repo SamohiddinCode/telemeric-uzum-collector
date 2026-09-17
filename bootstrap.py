@@ -120,6 +120,28 @@ async def analytics_status(
     }
 
 
+@app.post("/analytics/restore")
+async def analytics_restore(
+    payload: dict,
+    token: str = Query(default=""),
+    authorization: str = Header(default=""),
+):
+    """Restore the disposable analytics cache without re-ingesting into the Site."""
+    collector.require_setup_token(token, authorization)
+    updates = payload.get("updates")
+    if not isinstance(updates, list):
+        raise HTTPException(status_code=400, detail="updates must be a list")
+    if len(updates) > 5000:
+        raise HTTPException(status_code=400, detail="too many updates")
+    for update in updates:
+        message = update.get("message") if isinstance(update, dict) else None
+        chat = message.get("chat") if isinstance(message, dict) else None
+        if not isinstance(chat, dict) or int(chat.get("id") or 0) != report_config.source_chat_id:
+            raise HTTPException(status_code=400, detail="unexpected source chat")
+    message_store.record_updates(updates)
+    return {"restored": len(updates), "sourceChatId": report_config.source_chat_id}
+
+
 @app.post("/analytics/report-now")
 async def analytics_report_now(
     token: str = Query(default=""),
