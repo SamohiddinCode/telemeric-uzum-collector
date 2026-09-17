@@ -56,8 +56,12 @@ even if analytics cache writes or report rendering fail.
 
 Protected operator endpoints:
 
-- `GET /analytics/status?token=<SETUP_TOKEN>` — preview today's counters/config.
-- `POST /analytics/report-now?token=<SETUP_TOKEN>` — force a test report immediately.
+- `GET /analytics/status` with `Authorization: Bearer <SETUP_TOKEN>` — preview counters/config.
+- `POST /analytics/report-now` with the same header — force a test report immediately.
+
+The legacy `?token=` form remains available for the browser setup page, but
+operator API calls should use the authorization header so secrets do not enter
+request logs.
 
 ## Free Northflank deployment
 

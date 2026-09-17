@@ -59,6 +59,16 @@ class BridgeIngestTests(unittest.IsolatedAsyncioTestCase):
             main.collector_status.clear()
             main.collector_status.update(previous_status)
 
+    def test_setup_token_accepts_authorization_header(self):
+        previous_setup_token = main.SETUP_TOKEN
+        main.SETUP_TOKEN = "setup-test-token"
+        try:
+            main.require_setup_token("", "Bearer setup-test-token")
+            with self.assertRaises(HTTPException):
+                main.require_setup_token("", "Bearer wrong")
+        finally:
+            main.SETUP_TOKEN = previous_setup_token
+
 
 if __name__ == "__main__":
     unittest.main()

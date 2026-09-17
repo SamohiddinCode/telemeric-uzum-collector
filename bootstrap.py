@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import HTTPException, Query
+from fastapi import Header, HTTPException, Query
 
 import main as collector
 from analytics_config import ReportConfig
@@ -20,7 +21,7 @@ message_store = MessageStore(os.getenv("ANALYTICS_DB_PATH", "/tmp/telemeric/anal
 report_service = DailyReportService(message_store, report_config)
 
 _original_deliver = collector.deliver
-_original_run_collector = collector.run_collector
+_original_lifespan = collector.app.router.lifespan_context
 
 
 async def deliver_with_analytics(updates):
@@ -41,24 +42,28 @@ async def report_runner() -> None:
         await asyncio.sleep(1)
 
 
-async def run_collector_with_reports(session: str) -> None:
-    if not report_config.enabled:
-        await _original_run_collector(session)
-        return
-    report_task = asyncio.create_task(report_runner())
-    try:
-        await _original_run_collector(session)
-    finally:
-        report_task.cancel()
-        try:
-            await report_task
-        except asyncio.CancelledError:
-            pass
-
-
 collector.deliver = deliver_with_analytics
-collector.run_collector = run_collector_with_reports
 app = collector.app
+
+
+@asynccontextmanager
+async def analytics_lifespan(application):
+    report_task = None
+    async with _original_lifespan(application):
+        if report_config.enabled:
+            report_task = asyncio.create_task(report_runner())
+        try:
+            yield
+        finally:
+            if report_task:
+                report_task.cancel()
+                try:
+                    await report_task
+                except asyncio.CancelledError:
+                    pass
+
+
+app.router.lifespan_context = analytics_lifespan
 
 
 def parse_report_date(value: str | None):
@@ -75,8 +80,9 @@ def parse_report_date(value: str | None):
 async def analytics_status(
     token: str = Query(default=""),
     date: str | None = Query(default=None),
+    authorization: str = Header(default=""),
 ):
-    collector.require_setup_token(token)
+    collector.require_setup_token(token, authorization)
     target_day = parse_report_date(date)
     metrics = report_service.metrics_for_day(target_day)
     return {
@@ -107,8 +113,9 @@ async def analytics_status(
 async def analytics_report_now(
     token: str = Query(default=""),
     date: str | None = Query(default=None),
+    authorization: str = Header(default=""),
 ):
-    collector.require_setup_token(token)
+    collector.require_setup_token(token, authorization)
     client = collector.collector_client
     if not client or not client.is_connected() or not collector.collector_status.get("connected"):
         raise HTTPException(status_code=503, detail="Telegram collector is not connected")

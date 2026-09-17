@@ -233,8 +233,11 @@ async def backfill(client: TelegramClient, entity: Any) -> int:
     return sum(1 for message in messages if (message.message or "").strip())
 
 
-async def run_history_backfill(session: str) -> None:
+async def run_history_backfill(session: str, keep_connected: bool = False) -> None:
+    global collector_client
     client = TelegramClient(StringSession(session), API_ID, API_HASH)
+    if keep_connected:
+        collector_client = client
     backfill_status.update(running=True, imported=0, error="")
     try:
         await client.connect()
@@ -242,7 +245,9 @@ async def run_history_backfill(session: str) -> None:
             raise RuntimeError("Требуется повторная авторизация Telegram-аккаунта")
         entity = await client.get_entity(TARGET_CHAT_ID)
         imported = await backfill(client, entity)
-        backfill_status.update(imported=imported, error="")
+        backfill_status.update(running=False, imported=imported, error="")
+        if keep_connected:
+            await client.run_until_disconnected()
     except asyncio.CancelledError:
         raise
     except Exception as exc:  # noqa: BLE001 - surfaced through health and setup page
@@ -253,11 +258,29 @@ async def run_history_backfill(session: str) -> None:
             await client.disconnect()
 
 
-def start_history_backfill(session: str) -> None:
+def start_history_backfill(session: str, keep_connected: bool = False) -> None:
     global backfill_task
     if backfill_task and not backfill_task.done():
         return
-    backfill_task = asyncio.create_task(run_history_backfill(session))
+    backfill_task = asyncio.create_task(run_history_backfill(session, keep_connected=keep_connected))
+
+
+async def start_bridge_report_client() -> None:
+    """Keep a saved user session for history import and report delivery only."""
+    if not required_settings_ready():
+        collector_status["error"] = "Не заполнены обязательные настройки"
+        return
+    try:
+        session = await load_session()
+    except Exception as exc:  # noqa: BLE001 - surfaced through health
+        collector_status["error"] = f"Не удалось получить сессию: {exc}"
+        return
+    if not session:
+        collector_status["error"] = "Откройте /setup и войдите в Telegram"
+        return
+    # No NewMessage handler is installed here. The existing bridge remains the
+    # sole owner of live collection, avoiding duplicate production delivery.
+    start_history_backfill(session, keep_connected=True)
 
 
 async def run_collector(session: str) -> None:
@@ -320,8 +343,11 @@ async def start_saved_collector() -> None:
     collector_task = asyncio.create_task(run_collector(session))
 
 
-def require_setup_token(token: str) -> None:
-    if not SETUP_TOKEN or token != SETUP_TOKEN:
+def require_setup_token(token: str, authorization: str = "") -> None:
+    prefix = "Bearer "
+    header_token = authorization[len(prefix):] if authorization.startswith(prefix) else ""
+    supplied = header_token or token
+    if not SETUP_TOKEN or not secrets.compare_digest(supplied, SETUP_TOKEN):
         raise HTTPException(status_code=401, detail="Неверный ключ настройки")
 
 
@@ -339,6 +365,7 @@ async def lifespan(_: FastAPI):
             group="Uzum Franchise Chat",
             error="Ожидание связи с bridge",
         )
+        await start_bridge_report_client()
     else:
         await start_saved_collector()
     yield
@@ -395,6 +422,7 @@ async def health() -> dict[str, Any]:
     return {
         "ok": True,
         "settingsReady": required_settings_ready(),
+        "reportClientConnected": bool(collector_client and collector_client.is_connected()),
         **collector_status,
         "historyImport": backfill_status,
     }
@@ -469,7 +497,7 @@ async def verify(token: str = Form(...), code: str = Form(...), password: str = 
     await login_client.disconnect()
     login_client = None
     if TELEGRAM_BOT_TOKEN:
-        start_history_backfill(session)
+        start_history_backfill(session, keep_connected=True)
         return page("Готово", f"<h1>Импорт запущен</h1><p class='ok'>Загружаются последние {HISTORY_LIMIT} сообщений группы. Новые сообщения продолжает получать рабочий бот.</p>")
     await start_saved_collector()
     return page("Готово", "<h1>Аккаунт подключён</h1><p class='ok'>Сборщик загружает историю и новые сообщения выбранной группы. Кабинет начнёт обновляться автоматически.</p>")
