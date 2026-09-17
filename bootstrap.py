@@ -156,3 +156,22 @@ async def analytics_check_recipient(
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"reachable": True, "chat": chat}
+
+
+@app.post("/analytics/test-delivery")
+async def analytics_test_delivery(
+    token: str = Query(default=""),
+    authorization: str = Header(default=""),
+):
+    collector.require_setup_token(token, authorization)
+    if not bot_sender:
+        raise HTTPException(status_code=503, detail="Telegram bot sender is not configured")
+    try:
+        await bot_sender.send_message(
+            report_config.report_chat_id,
+            "✅ <b>Telemeric staging подключён</b>\n\n"
+            "Получатель отчётов подтверждён. Следующий этап — импорт реальных данных смены и отправка 3 PNG.",
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"sent": True, "reportChatId": report_config.report_chat_id}

@@ -61,6 +61,7 @@ Protected operator endpoints:
 - `GET /analytics/status` with `Authorization: Bearer <SETUP_TOKEN>` — preview counters/config.
 - `POST /analytics/report-now` with the same header — force a test report immediately.
 - `GET /analytics/check-recipient` with the same header — verify that the report bot can reach the configured recipient without sending a message.
+- `POST /analytics/test-delivery` with the same header — send one explicit staging connectivity confirmation.
 
 The legacy `?token=` form remains available for the browser setup page, but
 operator API calls should use the authorization header so secrets do not enter

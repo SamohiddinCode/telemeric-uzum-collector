@@ -36,7 +36,7 @@ class TelegramBotSender:
             "username": chat.get("username"),
         }
 
-    async def send_report(self, chat_id: int, paths: list[str], text: str) -> None:
+    async def send_message(self, chat_id: int, text: str) -> None:
         await self._request(
             "sendMessage",
             json={
@@ -46,6 +46,9 @@ class TelegramBotSender:
                 "link_preview_options": {"is_disabled": True},
             },
         )
+
+    async def send_report(self, chat_id: int, paths: list[str], text: str) -> None:
+        await self.send_message(chat_id, text)
         media = [
             {"type": "photo", "media": f"attach://photo{index}"}
             for index in range(len(paths))

@@ -45,6 +45,21 @@ class TelegramBotSenderTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, {"id": 8419189523, "type": "private", "username": None})
 
+    async def test_send_message(self):
+        requests = []
+
+        async def handler(request):
+            requests.append(await request.aread())
+            return httpx.Response(200, json={"ok": True, "result": {}})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            sender = TelegramBotSender("test-token", client=client)
+            await sender.send_message(8419189523, "<b>Connected</b>")
+
+        self.assertEqual(len(requests), 1)
+        self.assertIn(b"8419189523", requests[0])
+        self.assertIn(b"Connected", requests[0])
+
 
 if __name__ == "__main__":
     unittest.main()
