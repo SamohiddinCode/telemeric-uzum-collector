@@ -134,6 +134,14 @@ class AnalyticsTests(unittest.TestCase):
         self.assertEqual(metrics["total_tickets"], 0)
         self.assertEqual(metrics["unanswered"], 0)
 
+    def test_advice_to_other_partners_is_not_support_request(self):
+        messages = [
+            {"message_id": 55, "ts": self.ts(10, 0), "sender_id": 550, "sender_name": "Partner", "username": "p", "text": "Hamkorlar yordam xizmati bo'limiga hamma shuni yozsin", "reply_to_message_id": None},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["total_tickets"], 0)
+        self.assertEqual(metrics["unanswered"], 0)
+
     def test_reports_missing_reply_targets_as_data_quality_issue(self):
         messages = [
             {"message_id": 60, "ts": self.ts(10, 5), "sender_id": 900, "sender_name": "Support", "username": "uzum_franchise", "text": "Ответ", "reply_to_message_id": 59},

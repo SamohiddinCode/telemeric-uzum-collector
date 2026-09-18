@@ -88,6 +88,16 @@ SUPPORT_ADDRESS_MARKERS = (
     "korib",
 )
 
+
+def _addresses_other_partners(value: str) -> bool:
+    """Detect advice/discussion aimed at partners rather than at support."""
+    return (
+        ("hamkorlar" in value and "yozsin" in value)
+        or ("hamma" in value and "yozsin" in value)
+        or ("партнер" in value and "напиш" in value)
+        or ("все" in value and "напиш" in value)
+    )
+
 AUTOMATION_MARKERS = (
     "смена открыта",
     "смена закрыта",
@@ -160,6 +170,8 @@ def _scope_reason(
 
     if any(f"@{username}" in value for username in config.agent_usernames):
         return "eligible"
+    if _addresses_other_partners(value):
+        return "partner_dialogue"
     if (
         any(marker in value for marker in INQUIRY_MARKERS)
         and any(marker in value for marker in SUPPORT_ADDRESS_MARKERS)
