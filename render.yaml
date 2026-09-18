@@ -27,9 +27,9 @@ services:
       - key: WORKDAY_END
         value: 19:00
       - key: REPORT_TIME
-        value: 19:01
+        value: 19:05
       - key: SLA_TARGET_MINUTES
-        value: 5
+        value: 15
       - key: SLA_TARGET_PERCENT
         value: 90
       - key: TICKET_GAP_MINUTES

@@ -35,10 +35,10 @@ class AnalyticsTests(unittest.TestCase):
         metrics = build_metrics(self.messages, self.config)
         self.assertEqual(
             (metrics["total_tickets"], metrics["responded"], metrics["unanswered"], metrics["sla_ok"]),
-            (3, 2, 1, 0),
+            (3, 2, 1, 1),
         )
         self.assertEqual(metrics["total_messages"], 4)
-        self.assertAlmostEqual(metrics["sla_percent"], 0.0)
+        self.assertAlmostEqual(metrics["sla_percent"], 100 / 3)
         self.assertAlmostEqual(metrics["median_minutes"], 18.5)
         self.assertAlmostEqual(metrics["faq_coverage_percent"], 100.0)
         self.assertTrue(metrics["agent_configured"])
@@ -176,7 +176,7 @@ class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
         caption = client.captured[2]
         self.assertLessEqual(len(caption), 1024)
         self.assertIn("@Ddmit05", caption)
-        self.assertIn("Соблюдение SLA ≤ 5 мин", caption)
+        self.assertIn("Соблюдение SLA ≤ 15 мин", caption)
         self.assertIn("Покрытие FAQ", caption)
         self.assertIn("Reply-ответов поддержки", caption)
         self.assertIn("Корневые причины", caption)

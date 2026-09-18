@@ -47,9 +47,9 @@ Important settings:
 - `REPORT_CHAT_ID` — destination Telegram group. Defaults to the source group.
 - `REPORT_TIMEZONE=Asia/Tashkent`.
 - `WORKDAY_START=10:00`, `WORKDAY_END=19:00`.
-- `REPORT_TIME=19:01`.
-- `SLA_TARGET_MINUTES=5`. SLA считается как доля всех квалифицированных обращений
-  партнёров, получивших первый ответ поддержки не позднее чем через 5 минут.
+- `REPORT_TIME=19:05`.
+- `SLA_TARGET_MINUTES=15`. SLA считается как доля всех квалифицированных обращений
+  партнёров, получивших первый ответ поддержки не позднее чем через 15 минут.
 - `REPORT_MENTIONS=@Ddmit05` — упоминания в подписи к альбому отчёта.
 - `ANALYTICS_AGENT_USERNAMES=uzum_franchise` — shared support account without employee-level breakdown.
 - `TICKET_GAP_MINUTES=30` — customer messages inside this gap stay in one open ticket until the first support response.
