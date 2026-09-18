@@ -142,6 +142,13 @@ class AnalyticsTests(unittest.TestCase):
         self.assertEqual(metrics["total_tickets"], 0)
         self.assertEqual(metrics["unanswered"], 0)
 
+    def test_generic_korib_phrase_is_not_support_address(self):
+        messages = [
+            {"message_id": 56, "ts": self.ts(10, 0), "sender_id": 560, "sender_name": "Partner", "username": "p", "text": "Rosta kayfiyatlar tushadi bazida korib. Qanday kutarsak boladi?", "reply_to_message_id": None},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["total_tickets"], 0)
+
     def test_reports_missing_reply_targets_as_data_quality_issue(self):
         messages = [
             {"message_id": 60, "ts": self.ts(10, 5), "sender_id": 900, "sender_name": "Support", "username": "uzum_franchise", "text": "Ответ", "reply_to_message_id": 59},

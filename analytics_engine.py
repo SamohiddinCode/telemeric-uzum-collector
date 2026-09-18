@@ -84,8 +84,8 @@ SUPPORT_ADDRESS_MARKERS = (
     "lich",
     "shaxsiy",
     "qaravor",
-    "ko'rib",
-    "korib",
+    "ko'rib bering",
+    "korib bering",
 )
 
 
