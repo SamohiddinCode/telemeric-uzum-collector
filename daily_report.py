@@ -128,6 +128,7 @@ class DailyReportService:
                 f"📊 <b>Отчёт SLA — {day.strftime('%d.%m.%Y')}</b>\n"
                 f"🕒 Смена: <b>{metrics['shift_start']}–{metrics['shift_end']}</b> ({source_label})\n\n"
                 f"Обращения партнёров: <b>{metrics['total_tickets']}</b>\n"
+                f"Reply-ответов поддержки: <b>{metrics['support_reply_messages']}</b>\n"
                 f"Соблюдение SLA ≤ {self.config.sla_target_minutes} мин: <b>{sla}</b> "
                 f"({metrics['sla_ok']} вовремя из {metrics['total_tickets']})\n"
                 f"Медиана первого ответа: <b>{median}</b>\n"
@@ -164,6 +165,12 @@ class DailyReportService:
         while True:
             now = datetime.now(tz)
             scheduled = datetime.combine(now.date(), report_clock, tzinfo=tz)
-            if now >= scheduled and self.last_sent_day != now.date():
+            # Do not resend today's report merely because Render restarted long
+            # after the scheduled run.  A ten-minute delivery window still
+            # tolerates brief deploys or cold starts around report time.
+            delivery_deadline = scheduled + timedelta(minutes=10)
+            if scheduled <= now < delivery_deadline and self.last_sent_day != now.date():
                 await self.send_day(client, now.date())
+            elif now >= delivery_deadline and self.last_sent_day is None:
+                self.last_sent_day = now.date()
             await asyncio.sleep(30)

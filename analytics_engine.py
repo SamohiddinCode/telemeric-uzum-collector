@@ -109,6 +109,7 @@ def _scope_reason(
     message: dict[str, Any],
     messages_by_id: dict[int, dict[str, Any]],
     config: ReportConfig,
+    support_reply_targets: set[int] | None = None,
 ) -> str:
     """Classify one message for partner-support SLA scope."""
     if _is_service_message(message, config):
@@ -123,6 +124,14 @@ def _scope_reason(
     value = text.lower().replace("ё", "е")
     if any(marker in value for marker in AUTOMATION_MARKERS):
         return "automated"
+
+    # A direct Telegram Reply from support is authoritative evidence that the
+    # partner message belongs to the support queue.  Check it before the text
+    # heuristics: short requests such as "личку посмотрите" otherwise look like
+    # chatter and their real Reply is lost.
+    message_id = int(message.get("message_id") or 0)
+    if support_reply_targets and message_id in support_reply_targets:
+        return "eligible"
 
     reply_id = int(message.get("reply_to_message_id") or 0)
     replied = messages_by_id.get(reply_id)
@@ -168,9 +177,14 @@ def build_tickets(
         for message in messages
         if message.get("message_id")
     }
+    support_reply_targets = {
+        int(message.get("reply_to_message_id") or 0)
+        for message in messages
+        if _is_agent(message, config) and message.get("reply_to_message_id")
+    }
 
     for message in messages:
-        reason = _scope_reason(message, messages_by_id, config)
+        reason = _scope_reason(message, messages_by_id, config, support_reply_targets)
         if classification is not None:
             classification[reason] += 1
         if reason in {"automated", "invalid", "partner_dialogue", "non_inquiry"}:
@@ -245,6 +259,21 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
             delays.append(ticket)
 
     delays.sort(key=lambda t: t.response_minutes or 0, reverse=True)
+    messages_by_id = {
+        int(message["message_id"]): message
+        for message in messages
+        if message.get("message_id")
+    }
+    support_reply_messages = [
+        message
+        for message in messages
+        if _is_agent(message, config) and message.get("reply_to_message_id")
+    ]
+    linked_support_replies = sum(
+        1
+        for message in support_reply_messages
+        if int(message.get("reply_to_message_id") or 0) in messages_by_id
+    )
     faq_covered = sum(count for label, count in categories.items() if label != "Другое")
     total_tickets = len(tickets)
     root_causes = [
@@ -260,6 +289,8 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
         "total_tickets": total_tickets,
         "total_messages": sum(len(ticket.messages) for ticket in tickets),
         "responded": len(responded),
+        "support_reply_messages": len(support_reply_messages),
+        "linked_support_replies": linked_support_replies,
         "unanswered": len(unanswered),
         "sla_ok": len(sla_ok),
         "sla_breaches": total_tickets - len(sla_ok),

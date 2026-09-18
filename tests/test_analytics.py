@@ -105,9 +105,23 @@ class AnalyticsTests(unittest.TestCase):
             {"message_id": 32, "ts": self.ts(10, 4), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Ответ другому участнику", "reply_to_message_id": 31},
         ]
         metrics = build_metrics(messages, self.config)
-        self.assertEqual(metrics["total_tickets"], 1)
-        self.assertEqual(metrics["responded"], 0)
+        self.assertEqual(metrics["total_tickets"], 2)
+        self.assertEqual(metrics["responded"], 1)
         self.assertEqual(metrics["unanswered"], 1)
+        self.assertEqual(metrics["support_reply_messages"], 1)
+
+    def test_direct_support_reply_qualifies_short_request(self):
+        messages = [
+            {"message_id": 40, "ts": self.ts(10, 0), "sender_id": 400, "sender_name": "Partner", "username": "p", "text": "Lichda javob bervoring", "reply_to_message_id": None},
+            {"message_id": 41, "ts": self.ts(10, 2), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Javob berdik", "reply_to_message_id": 40},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["total_tickets"], 1)
+        self.assertEqual(metrics["responded"], 1)
+        self.assertEqual(metrics["unanswered"], 0)
+        self.assertEqual(metrics["sla_ok"], 1)
+        self.assertEqual(metrics["support_reply_messages"], 1)
+        self.assertEqual(metrics["linked_support_replies"], 1)
 
     def test_render(self):
         metrics = build_metrics(self.messages, self.config)
@@ -157,6 +171,7 @@ class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("@Ddmit05", caption)
         self.assertIn("Соблюдение SLA ≤ 5 мин", caption)
         self.assertIn("Покрытие FAQ", caption)
+        self.assertIn("Reply-ответов поддержки", caption)
         self.assertIn("Корневые причины", caption)
         self.assertIn("Исключены диалоги партнёров", caption)
 

@@ -92,7 +92,8 @@ class ReportRenderer:
         p90 = "—" if m["p90_minutes"] is None else f"{m['p90_minutes']:.1f} мин"
         signals = [
             f"• В SLA ≤ {c.sla_target_minutes} мин: {m['sla_ok']} из {m['total_tickets']}",
-            f"• Ответов поддержки: {m['responded']} · без ответа: {m['unanswered']}",
+            f"• Reply-ответов поддержки: {m['support_reply_messages']}",
+            f"• Обращений с ответом: {m['responded']} · без ответа: {m['unanswered']}",
             f"• 90-й перцентиль ответа: {p90}",
             f"• Исключено авто/диалогов/не-запросов: {sum(m['excluded'].values())}",
         ]

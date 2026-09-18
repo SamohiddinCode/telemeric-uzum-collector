@@ -151,6 +151,8 @@ async def analytics_status(
             "messages": metrics["total_messages"],
             "tickets": metrics["total_tickets"],
             "responded": metrics["responded"],
+            "supportReplyMessages": metrics["support_reply_messages"],
+            "linkedSupportReplies": metrics["linked_support_replies"],
             "unanswered": metrics["unanswered"],
             "slaPercent": metrics["sla_percent"],
             "slaCompliant": metrics["sla_ok"],
