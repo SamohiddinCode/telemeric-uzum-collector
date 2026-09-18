@@ -161,11 +161,18 @@ class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
                     self.captured = (chat_id, len(paths), caption, all(Path(p).exists() for p in paths))
 
             client = Client()
-            result = await DailyReportService(store, config).send_day(client, date(2026, 9, 17), force=True)
+            service = DailyReportService(store, config)
+            result = await service.send_day(
+                client,
+                date(2026, 9, 17),
+                force=True,
+                report_chat_id=8419189523,
+            )
 
         self.assertTrue(result["sent"])
         self.assertEqual(client.captured[:2], (8419189523, 3))
         self.assertTrue(client.captured[3])
+        self.assertIsNone(service.last_sent_day)
         caption = client.captured[2]
         self.assertLessEqual(len(caption), 1024)
         self.assertIn("@Ddmit05", caption)

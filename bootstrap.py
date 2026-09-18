@@ -190,6 +190,7 @@ async def analytics_restore(
 async def analytics_report_now(
     token: str = Query(default=""),
     date: str | None = Query(default=None),
+    chat_id: int | None = Query(default=None),
     authorization: str = Header(default=""),
 ):
     collector.require_setup_token(token, authorization)
@@ -204,14 +205,20 @@ async def analytics_report_now(
         await refresh_analytics_cache(target_day)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Не удалось обновить данные: {exc}") from exc
-    result = await report_service.send_day(client, target_day, force=True)
+    recipient = chat_id or report_config.report_chat_id
+    result = await report_service.send_day(
+        client,
+        target_day,
+        force=True,
+        report_chat_id=recipient,
+    )
     metrics = result.get("metrics") or {}
     return {
         "sent": result.get("sent", False),
         "date": str(target_day),
         "shift": f"{metrics.get('shift_start', '—')}-{metrics.get('shift_end', '—')}",
         "shiftSource": metrics.get("shift_source"),
-        "reportChatId": report_config.report_chat_id,
+        "reportChatId": recipient,
         "tickets": metrics.get("total_tickets", 0),
         "slaPercent": metrics.get("sla_percent"),
         "medianResponseMinutes": metrics.get("median_minutes"),

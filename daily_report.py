@@ -93,7 +93,13 @@ class DailyReportService:
         metrics["shift_source"] = source
         return metrics
 
-    async def send_day(self, client: Any, day: date, force: bool = False) -> dict[str, Any]:
+    async def send_day(
+        self,
+        client: Any,
+        day: date,
+        force: bool = False,
+        report_chat_id: int | None = None,
+    ) -> dict[str, Any]:
         if self.last_sent_day == day and not force:
             return {"sent": False, "reason": "already-sent"}
         metrics = self.metrics_for_day(day)
@@ -146,17 +152,20 @@ class DailyReportService:
                 "• FAQ Coverage — доля обращений, отнесённых к известной теме.\n\n"
                 f"💬 {commentary}"
             )
+            recipient = report_chat_id or self.config.report_chat_id
             if hasattr(client, "send_report"):
-                await client.send_report(self.config.report_chat_id, paths, caption)
+                await client.send_report(recipient, paths, caption)
             else:
-                target = await client.get_entity(self.config.report_chat_id)
+                target = await client.get_entity(recipient)
                 try:
                     await client.send_file(target, paths, caption=caption, parse_mode="html")
                 except Exception:
                     await client.send_message(target, caption, parse_mode="html")
                     for path in paths:
                         await client.send_file(target, path)
-        self.last_sent_day = day
+        # A manual/test delivery must not suppress the normal scheduled report.
+        if not force:
+            self.last_sent_day = day
         return {"sent": True, "metrics": metrics}
 
     async def run(self, client: Any) -> None:
