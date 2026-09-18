@@ -135,6 +135,13 @@ class DailyReportService:
                 f"🕒 Смена: <b>{metrics['shift_start']}–{metrics['shift_end']}</b> ({source_label})\n\n"
                 f"Обращения партнёров: <b>{metrics['total_tickets']}</b>\n"
                 f"Reply-ответов поддержки: <b>{metrics['support_reply_messages']}</b>\n"
+                f"Связано с исходными обращениями: <b>{metrics['linked_support_replies']}</b>"
+                + (
+                    f"; не найдено исходных сообщений: <b>{metrics['unlinked_reply_targets']}</b>\n"
+                    if metrics["unlinked_reply_targets"]
+                    else "\n"
+                )
+                + (
                 f"Соблюдение SLA ≤ {self.config.sla_target_minutes} мин: <b>{sla}</b> "
                 f"({metrics['sla_ok']} вовремя из {metrics['total_tickets']})\n"
                 f"Медиана первого ответа: <b>{median}</b>\n"
@@ -151,6 +158,7 @@ class DailyReportService:
                 "• Медиана считается только по обращениям с зафиксированным ответом.\n"
                 "• FAQ Coverage — доля обращений, отнесённых к известной теме.\n\n"
                 f"💬 {commentary}"
+                )
             )
             recipient = report_chat_id or self.config.report_chat_id
             if hasattr(client, "send_report"):

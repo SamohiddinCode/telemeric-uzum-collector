@@ -71,6 +71,23 @@ INQUIRY_MARKERS = (
     "mumkinmi",
 )
 
+# An unanswered message belongs in SLA only when it is visibly addressed to
+# support.  A question mark or a generic word such as "yordam" is not enough in
+# a shared partner group: those are often partner-to-partner conversations.
+# Direct Telegram replies from support remain authoritative and are handled
+# before this check in _scope_reason().
+SUPPORT_ADDRESS_MARKERS = (
+    "поддерж",
+    "админ",
+    "оператор",
+    "личк",
+    "lich",
+    "shaxsiy",
+    "qaravor",
+    "ko'rib",
+    "korib",
+)
+
 AUTOMATION_MARKERS = (
     "смена открыта",
     "смена закрыта",
@@ -143,7 +160,10 @@ def _scope_reason(
 
     if any(f"@{username}" in value for username in config.agent_usernames):
         return "eligible"
-    if any(marker in value for marker in INQUIRY_MARKERS):
+    if (
+        any(marker in value for marker in INQUIRY_MARKERS)
+        and any(marker in value for marker in SUPPORT_ADDRESS_MARKERS)
+    ):
         return "eligible"
     return "non_inquiry"
 
@@ -185,12 +205,22 @@ def build_tickets(
 
     for message in messages:
         reason = _scope_reason(message, messages_by_id, config, support_reply_targets)
+        sender_id = int(message.get("sender_id") or 0)
+        ts = int(message.get("ts") or 0)
+        current = active.get(sender_id)
+        # Keep a same-sender follow-up inside an already qualified, still-open
+        # request.  It does not independently qualify a new SLA ticket.
+        if (
+            reason == "non_inquiry"
+            and current is not None
+            and current.first_response_at is None
+            and ts - current.last_customer_at <= gap
+        ):
+            reason = "eligible"
         if classification is not None:
             classification[reason] += 1
         if reason in {"automated", "invalid", "partner_dialogue", "non_inquiry"}:
             continue
-        sender_id = int(message.get("sender_id") or 0)
-        ts = int(message.get("ts") or 0)
         if reason == "support":
             target = by_message.get(int(message.get("reply_to_message_id") or 0))
             if target and target.first_response_at is None:
@@ -274,6 +304,11 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
         for message in support_reply_messages
         if int(message.get("reply_to_message_id") or 0) in messages_by_id
     )
+    unlinked_reply_targets = {
+        int(message.get("reply_to_message_id") or 0)
+        for message in support_reply_messages
+        if int(message.get("reply_to_message_id") or 0) not in messages_by_id
+    }
     faq_covered = sum(count for label, count in categories.items() if label != "Другое")
     total_tickets = len(tickets)
     root_causes = [
@@ -291,6 +326,8 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
         "responded": len(responded),
         "support_reply_messages": len(support_reply_messages),
         "linked_support_replies": linked_support_replies,
+        "unlinked_support_replies": len(support_reply_messages) - linked_support_replies,
+        "unlinked_reply_targets": len(unlinked_reply_targets),
         "unanswered": len(unanswered),
         "sla_ok": len(sla_ok),
         "sla_breaches": total_tickets - len(sla_ok),

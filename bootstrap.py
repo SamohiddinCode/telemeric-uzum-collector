@@ -153,6 +153,8 @@ async def analytics_status(
             "responded": metrics["responded"],
             "supportReplyMessages": metrics["support_reply_messages"],
             "linkedSupportReplies": metrics["linked_support_replies"],
+            "unlinkedSupportReplies": metrics["unlinked_support_replies"],
+            "unlinkedReplyTargets": metrics["unlinked_reply_targets"],
             "unanswered": metrics["unanswered"],
             "slaPercent": metrics["sla_percent"],
             "slaCompliant": metrics["sla_ok"],

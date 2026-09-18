@@ -27,7 +27,7 @@ class AnalyticsTests(unittest.TestCase):
             {"message_id": 3, "ts": self.ts(10, 8), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Выплата сегодня после 15:00", "reply_to_message_id": 1},
             {"message_id": 4, "ts": self.ts(11, 0), "sender_id": 101, "sender_name": "Partner B", "username": "b", "text": "Приложение не работает", "reply_to_message_id": None},
             {"message_id": 5, "ts": self.ts(11, 30), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Перезапустите приложение", "reply_to_message_id": 4},
-            {"message_id": 6, "ts": self.ts(12, 0), "sender_id": 102, "sender_name": "Partner C", "username": "c", "text": "Нужен договор аренды", "reply_to_message_id": None},
+            {"message_id": 6, "ts": self.ts(12, 0), "sender_id": 102, "sender_name": "Partner C", "username": "c", "text": "Поддержка, нужен договор аренды", "reply_to_message_id": None},
             {"message_id": 7, "ts": self.ts(18, 59), "sender_id": 700, "sender_name": "Shift Bot", "username": "opening_closing_bot", "text": "Смена скоро будет закрыта", "reply_to_message_id": None},
         ]
 
@@ -50,7 +50,7 @@ class AnalyticsTests(unittest.TestCase):
             {"message_id": 22, "ts": self.ts(10, 2), "sender_id": 202, "sender_name": "Partner C", "username": "pc", "text": "Добрый день всем", "reply_to_message_id": None},
             {"message_id": 23, "ts": self.ts(10, 3), "sender_id": 700, "sender_name": "Bot", "username": "other_bot", "is_bot": True, "text": "Автоматическое сообщение", "reply_to_message_id": None},
             {"message_id": 24, "ts": self.ts(10, 4), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Проверяем", "reply_to_message_id": 20},
-            {"message_id": 25, "ts": self.ts(11, 0), "sender_id": 203, "sender_name": "Partner D", "username": "pd", "text": "Почему приложение не работает?", "reply_to_message_id": None},
+            {"message_id": 25, "ts": self.ts(11, 0), "sender_id": 203, "sender_name": "Partner D", "username": "pd", "text": "Поддержка, почему приложение не работает?", "reply_to_message_id": None},
         ]
         metrics = build_metrics(messages, self.config)
         self.assertEqual(metrics["total_tickets"], 2)
@@ -76,6 +76,7 @@ class AnalyticsTests(unittest.TestCase):
                 (105, self.ts(19, 5), 101, "partner_b", "Позднее сообщение"),
             ]
             for message_id, ts, sender_id, username, text in raw_messages:
+                reply_to = 102 if message_id == 103 else None
                 updates.append({
                     "message": {
                         "message_id": message_id,
@@ -88,6 +89,7 @@ class AnalyticsTests(unittest.TestCase):
                             "username": username,
                             "is_bot": username == "opening_closing_bot",
                         },
+                        **({"reply_to_message": {"message_id": reply_to}} if reply_to else {}),
                     }
                 })
             store.record_updates(updates)
@@ -100,7 +102,7 @@ class AnalyticsTests(unittest.TestCase):
 
     def test_support_reply_to_another_message_does_not_close_latest_ticket(self):
         messages = [
-            {"message_id": 30, "ts": self.ts(10, 0), "sender_id": 300, "sender_name": "Partner A", "username": "a", "text": "Почему приложение не работает?", "reply_to_message_id": None},
+            {"message_id": 30, "ts": self.ts(10, 0), "sender_id": 300, "sender_name": "Partner A", "username": "a", "text": "Поддержка, почему приложение не работает?", "reply_to_message_id": None},
             {"message_id": 31, "ts": self.ts(10, 1), "sender_id": 301, "sender_name": "Partner B", "username": "b", "text": "Добрый день", "reply_to_message_id": None},
             {"message_id": 32, "ts": self.ts(10, 4), "sender_id": 900, "sender_name": "Uzum Franchise", "username": "uzum_franchise", "text": "Ответ другому участнику", "reply_to_message_id": 31},
         ]
@@ -122,6 +124,26 @@ class AnalyticsTests(unittest.TestCase):
         self.assertEqual(metrics["sla_ok"], 1)
         self.assertEqual(metrics["support_reply_messages"], 1)
         self.assertEqual(metrics["linked_support_replies"], 1)
+
+    def test_generic_partner_question_is_not_unanswered_support_ticket(self):
+        messages = [
+            {"message_id": 50, "ts": self.ts(10, 0), "sender_id": 500, "sender_name": "Partner", "username": "p", "text": "Nega savdo kam, bunga yordam berishmidimi?", "reply_to_message_id": None},
+            {"message_id": 51, "ts": self.ts(10, 1), "sender_id": 501, "sender_name": "Partner 2", "username": "p2", "text": "100 mln foydami?", "reply_to_message_id": None},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["total_tickets"], 0)
+        self.assertEqual(metrics["unanswered"], 0)
+
+    def test_reports_missing_reply_targets_as_data_quality_issue(self):
+        messages = [
+            {"message_id": 60, "ts": self.ts(10, 5), "sender_id": 900, "sender_name": "Support", "username": "uzum_franchise", "text": "Ответ", "reply_to_message_id": 59},
+            {"message_id": 61, "ts": self.ts(10, 6), "sender_id": 900, "sender_name": "Support", "username": "uzum_franchise", "text": "Дополнение", "reply_to_message_id": 59},
+        ]
+        metrics = build_metrics(messages, self.config)
+        self.assertEqual(metrics["support_reply_messages"], 2)
+        self.assertEqual(metrics["linked_support_replies"], 0)
+        self.assertEqual(metrics["unlinked_support_replies"], 2)
+        self.assertEqual(metrics["unlinked_reply_targets"], 1)
 
     def test_render(self):
         metrics = build_metrics(self.messages, self.config)
