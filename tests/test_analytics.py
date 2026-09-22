@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from datetime import date, datetime
 from pathlib import Path
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from analytics_config import ReportConfig
@@ -218,6 +219,39 @@ class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Reply-ответов поддержки", caption)
         self.assertIn("Корневые причины", caption)
         self.assertIn("Исключены диалоги партнёров", caption)
+
+    async def test_long_commentary_is_trimmed_for_telegram_album(self):
+        config = ReportConfig(
+            -1002707306458,
+            8419189523,
+            agent_usernames={"uzum_franchise"},
+            service_bot_usernames={"opening_closing_bot"},
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = MessageStore(str(Path(tmp) / "analytics.sqlite3"))
+
+            class Client:
+                caption = None
+
+                async def send_report(self, chat_id, paths, caption):
+                    self.caption = caption
+
+            client = Client()
+            service = DailyReportService(store, config)
+            with patch("daily_report.build_commentary", return_value="Длинный комментарий " * 200):
+                result = await service.send_day(
+                    client,
+                    date(2026, 9, 17),
+                    force=True,
+                    report_chat_id=8419189523,
+                )
+
+        self.assertTrue(result["sent"])
+        self.assertLessEqual(len(client.caption), 1000)
+        self.assertTrue(client.caption.endswith("…"))
+        self.assertIn("Соблюдение SLA ≤ 15 мин", client.caption)
+        self.assertIn("Критерии расчёта", client.caption)
 
 
 if __name__ == "__main__":

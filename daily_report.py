@@ -13,6 +13,19 @@ from analytics_store import MessageStore
 from report_renderer import ReportRenderer
 
 
+TELEGRAM_CAPTION_SAFE_LIMIT = 1000
+
+
+def _fit_commentary(prefix: str, commentary: str) -> str:
+    """Keep an album caption below Telegram's 1024-character limit."""
+    available = TELEGRAM_CAPTION_SAFE_LIMIT - len(prefix)
+    if available <= 0:
+        raise RuntimeError("Report caption prefix exceeds Telegram's safe limit")
+    if len(commentary) <= available:
+        return prefix + commentary
+    return prefix + commentary[: available - 1].rstrip() + "…"
+
+
 def parse_time(value: str) -> time:
     hour, minute = [int(x) for x in value.split(":", 1)]
     return time(hour, minute)
@@ -129,15 +142,15 @@ class DailyReportService:
                 for item in metrics["root_causes"][:3]
             ) or "нет квалифицированных обращений"
             mentions = " ".join(self.config.report_mentions)
-            caption = (
+            caption_prefix = (
                 f"{mentions}\n"
                 f"📊 <b>Отчёт SLA — {day.strftime('%d.%m.%Y')}</b>\n"
                 f"🕒 Смена: <b>{metrics['shift_start']}–{metrics['shift_end']}</b> ({source_label})\n\n"
                 f"Обращения партнёров: <b>{metrics['total_tickets']}</b>\n"
-                f"Reply-ответов поддержки: <b>{metrics['support_reply_messages']}</b>\n"
-                f"Связано с исходными обращениями: <b>{metrics['linked_support_replies']}</b>"
+                f"Reply-ответов поддержки: <b>{metrics['support_reply_messages']}</b>; "
+                f"связано: <b>{metrics['linked_support_replies']}</b>"
                 + (
-                    f"; не найдено исходных сообщений: <b>{metrics['unlinked_reply_targets']}</b>\n"
+                    f"; без исходного: <b>{metrics['unlinked_reply_targets']}</b>\n"
                     if metrics["unlinked_reply_targets"]
                     else "\n"
                 )
@@ -152,14 +165,14 @@ class DailyReportService:
                 f"без ответа: {metrics['unanswered']})\n"
                 f"Корневые причины: {causes}\n\n"
                 "<b>Критерии расчёта</b>\n"
-                "• Включены только вопросы/просьбы партнёров к поддержке.\n"
-                "• Исключены диалоги партнёров между собой, не-обращения и автоматические сообщения.\n"
+                "• Только вопросы/просьбы партнёров к поддержке.\n"
+                "• Исключены диалоги партнёров, не-обращения и автоматика.\n"
                 f"• SLA % = ответы ≤ {self.config.sla_target_minutes} мин / все квалифицированные обращения × 100%.\n"
-                "• Медиана считается только по обращениям с зафиксированным ответом.\n"
-                "• FAQ Coverage — доля обращений, отнесённых к известной теме.\n\n"
-                f"💬 {commentary}"
+                "• Медиана — только обращения с ответом; FAQ — известные темы.\n\n"
+                "💬 "
                 )
             )
+            caption = _fit_commentary(caption_prefix, commentary)
             recipient = report_chat_id or self.config.report_chat_id
             if hasattr(client, "send_report"):
                 await client.send_report(recipient, paths, caption)
