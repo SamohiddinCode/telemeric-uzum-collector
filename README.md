@@ -53,6 +53,15 @@ Important settings:
 - `REPORT_MENTIONS=@Ddmit05` — упоминания в подписи к альбому отчёта.
 - `ANALYTICS_AGENT_USERNAMES=uzum_franchise` — shared support account without employee-level breakdown.
 - `TICKET_GAP_MINUTES=30` — customer messages inside this gap stay in one open ticket until the first support response.
+- `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_WEBHOOK_SECRET` — optional
+  Google Apps Script endpoint used to archive one complete aggregate report row per
+  day. A repeated report for the same date updates that row instead of duplicating it.
+
+The Apps Script source is in `google_sheets_webhook.gs`. Deploy it as a web app for
+the target spreadsheet, store the same random secret in the script property
+`WEBHOOK_SECRET` and in Render, then set the deployed `/exec` URL as
+`GOOGLE_SHEETS_WEBHOOK_URL`. Spreadsheet failures are logged after Telegram
+delivery and never suppress the Telegram report.
 
 Keep `DAILY_REPORT_ENABLED=false` until the destination group has been verified and
 a manual report has been checked. The original Telegram -> Site delivery continues

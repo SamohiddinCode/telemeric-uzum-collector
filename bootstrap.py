@@ -13,13 +13,15 @@ import main as collector
 from analytics_config import ReportConfig
 from analytics_store import MessageStore
 from daily_report import DailyReportService
+from google_sheets_writer import GoogleSheetsWriter
 from telegram_bot_sender import TelegramBotSender
 
 
 logger = logging.getLogger("telemeric.analytics")
 report_config = ReportConfig.from_env(collector.TARGET_CHAT_ID)
 message_store = MessageStore(os.getenv("ANALYTICS_DB_PATH", "/tmp/telemeric/analytics.sqlite3"))
-report_service = DailyReportService(message_store, report_config)
+sheets_writer = GoogleSheetsWriter.from_env()
+report_service = DailyReportService(message_store, report_config, sheets_writer=sheets_writer)
 bot_sender = TelegramBotSender(collector.TELEGRAM_BOT_TOKEN) if collector.TELEGRAM_BOT_TOKEN else None
 
 _original_deliver = collector.deliver
@@ -226,6 +228,7 @@ async def analytics_report_now(
         "medianResponseMinutes": metrics.get("median_minutes"),
         "faqCoveragePercent": metrics.get("faq_coverage_percent"),
         "unanswered": metrics.get("unanswered", 0),
+        "sheetSaved": result.get("sheet_saved", False),
     }
 
 

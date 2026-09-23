@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import tempfile
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -14,6 +15,7 @@ from report_renderer import ReportRenderer
 
 
 TELEGRAM_CAPTION_SAFE_LIMIT = 1000
+logger = logging.getLogger("telemeric.analytics")
 
 
 def _fit_commentary(prefix: str, commentary: str) -> str:
@@ -51,8 +53,9 @@ def _looks_like_close(text: str) -> bool:
 
 
 class DailyReportService:
-    def __init__(self, store: MessageStore, config: ReportConfig) -> None:
+    def __init__(self, store: MessageStore, config: ReportConfig, sheets_writer: Any = None) -> None:
         self.store, self.config = store, config
+        self.sheets_writer = sheets_writer
         self.renderer = ReportRenderer()
         self.last_sent_day: date | None = None
 
@@ -184,10 +187,26 @@ class DailyReportService:
                     await client.send_message(target, caption, parse_mode="html")
                     for path in paths:
                         await client.send_file(target, path)
+        sheet_saved = False
+        if self.sheets_writer is not None:
+            try:
+                await self.sheets_writer.upsert_day(
+                    day,
+                    metrics,
+                    self.config,
+                    commentary,
+                    recipient,
+                )
+                sheet_saved = True
+            except Exception:
+                logger.exception(
+                    "Google Sheets write failed after Telegram report delivery for %s",
+                    day,
+                )
         # A manual/test delivery must not suppress the normal scheduled report.
         if not force:
             self.last_sent_day = day
-        return {"sent": True, "metrics": metrics}
+        return {"sent": True, "metrics": metrics, "sheet_saved": sheet_saved}
 
     async def run(self, client: Any) -> None:
         tz = ZoneInfo(self.config.timezone)

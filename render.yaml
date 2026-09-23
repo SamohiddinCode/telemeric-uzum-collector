@@ -52,3 +52,7 @@ services:
         sync: false
       - key: SETUP_TOKEN
         generateValue: true
+      - key: GOOGLE_SHEETS_WEBHOOK_URL
+        sync: false
+      - key: GOOGLE_SHEETS_WEBHOOK_SECRET
+        sync: false

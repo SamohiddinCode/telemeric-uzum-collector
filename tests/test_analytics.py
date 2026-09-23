@@ -253,6 +253,35 @@ class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Соблюдение SLA ≤ 15 мин", client.caption)
         self.assertIn("Критерии расчёта", client.caption)
 
+    async def test_sheet_failure_does_not_break_telegram_delivery(self):
+        config = ReportConfig(-1002707306458, -5271279516)
+
+        class Client:
+            sent = False
+
+            async def send_report(self, chat_id, paths, caption):
+                self.sent = True
+
+        class FailingSheetsWriter:
+            async def upsert_day(self, *args):
+                raise RuntimeError("temporary sheet failure")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = MessageStore(str(Path(tmp) / "analytics.sqlite3"))
+            client = Client()
+            service = DailyReportService(store, config, sheets_writer=FailingSheetsWriter())
+            with self.assertLogs("telemeric.analytics", level="ERROR"):
+                result = await service.send_day(
+                    client,
+                    date(2026, 9, 22),
+                    force=True,
+                    report_chat_id=-5271279516,
+                )
+
+        self.assertTrue(client.sent)
+        self.assertTrue(result["sent"])
+        self.assertFalse(result["sheet_saved"])
+
 
 if __name__ == "__main__":
     unittest.main()
