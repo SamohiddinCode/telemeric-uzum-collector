@@ -1,4 +1,5 @@
 const SHEET_NAME = 'Ежедневные отчёты';
+const SPREADSHEET_ID = '1sZNuyCkEU_Cz4hIhkPe-2-VsX5btPASlyKXDcsXpMqc';
 const HEADERS = [
   'Дата',
   'Начало смены',
@@ -39,7 +40,7 @@ function doPost(e) {
       return jsonResponse({ ok: false, error: 'invalid date' });
     }
 
-    const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
     const sheet = spreadsheet.getSheetByName(SHEET_NAME) || spreadsheet.insertSheet(SHEET_NAME);
     ensureHeader(sheet);
 
@@ -92,8 +93,14 @@ function ensureHeader(sheet) {
 
 function findDateRow(sheet, dateValue) {
   if (sheet.getLastRow() < 2) return null;
-  const dates = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getDisplayValues();
-  const index = dates.findIndex(row => row[0] === dateValue);
+  const dates = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+  const index = dates.findIndex(row => {
+    const value = row[0];
+    if (value instanceof Date) {
+      return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd') === dateValue;
+    }
+    return String(value) === dateValue;
+  });
   return index < 0 ? null : index + 2;
 }
 
