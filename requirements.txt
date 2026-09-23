@@ -1,6 +1,8 @@
 cryptography==46.0.3
 fastapi==0.120.4
 httpx==0.28.1
+Pillow==12.3.0
+qrcode==8.2
 python-multipart==0.0.20
 telethon==1.42.0
 uvicorn==0.38.0

@@ -2,17 +2,22 @@ import asyncio
 import base64
 import hashlib
 import html
+import io
 import os
+import secrets
 import signal
+import json
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
+import qrcode
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import FastAPI, Form, HTTPException, Query
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import HTMLResponse
 from telethon import TelegramClient, events
-from telethon.errors import SessionPasswordNeededError
+from telethon.errors import PhonePasswordFloodError, SessionPasswordNeededError
 from telethon.sessions import StringSession
 from telethon.tl.types import Channel, User
 from telethon.utils import get_peer_id
@@ -25,13 +30,19 @@ SITE_URL = os.environ.get("TELEMERIC_SITE_URL", "").rstrip("/")
 COLLECTOR_SECRET = os.environ.get("TELEGRAM_COLLECTOR_SECRET", "")
 SITES_AUTH_TOKEN = os.environ.get("SITES_AUTH_TOKEN", "")
 SETUP_TOKEN = os.environ.get("SETUP_TOKEN", "")
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 HISTORY_LIMIT = int(os.environ.get("HISTORY_LIMIT", "5000"))
 
 collector_task: asyncio.Task[Any] | None = None
+backfill_task: asyncio.Task[Any] | None = None
 collector_client: TelegramClient | None = None
 login_client: TelegramClient | None = None
 login_phone = ""
 login_code_hash = ""
+login_lock = asyncio.Lock()
+qr_login: Any | None = None
+qr_wait_task: asyncio.Task[Any] | None = None
+qr_login_status: dict[str, str] = {"state": "idle", "error": ""}
 collector_status: dict[str, Any] = {
     "authorized": False,
     "connected": False,
@@ -39,6 +50,62 @@ collector_status: dict[str, Any] = {
     "group": "",
     "error": "",
 }
+backfill_status: dict[str, Any] = {
+    "running": False,
+    "imported": 0,
+    "error": "",
+}
+report_client_status: dict[str, Any] = {
+    "connected": False,
+    "error": "",
+}
+
+
+def telegram_export_updates(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Convert Telegram Desktop JSON export messages to Bot API-like updates."""
+    result: list[dict[str, Any]] = []
+    for item in payload.get("messages", []):
+        if not isinstance(item, dict) or item.get("type") != "message":
+            continue
+        text_value = item.get("text", "")
+        if isinstance(text_value, list):
+            text = "".join(part if isinstance(part, str) else str(part.get("text", "")) for part in text_value)
+        else:
+            text = str(text_value or "")
+        text = text.strip()
+        if not text:
+            continue
+        date_value = item.get("date_unixtime")
+        if date_value is not None:
+            try:
+                timestamp = int(date_value)
+            except (TypeError, ValueError):
+                timestamp = 0
+        else:
+            try:
+                timestamp = int(datetime.fromisoformat(str(item.get("date", "")).replace("Z", "+00:00")).timestamp())
+            except (TypeError, ValueError, OverflowError):
+                timestamp = 0
+        sender_id = str(item.get("from_id") or "")
+        is_support_bot = sender_id.endswith("8724485176") or "support_bot" in str(item.get("from", "")).lower()
+        sender: dict[str, Any] = {
+            "id": int(sender_id.removeprefix("user").removeprefix("bot")) if sender_id.removeprefix("user").removeprefix("bot").isdigit() else abs(hash(sender_id)) % 2_000_000_000,
+            "first_name": str(item.get("from") or ""),
+            "last_name": "",
+            "username": "uzum_franchise_support_bot" if is_support_bot else "",
+            "is_bot": is_support_bot,
+        }
+        message: dict[str, Any] = {
+            "message_id": int(item.get("id") or len(result) + 1),
+            "date": timestamp,
+            "text": text,
+            "chat": {"id": TARGET_CHAT_ID, "title": str(payload.get("name") or "Uzum Franchise Chat"), "type": "supergroup"},
+            "from": sender,
+        }
+        if item.get("reply_to_message_id"):
+            message["reply_to_message"] = {"message_id": int(item["reply_to_message_id"])}
+        result.append({"update_id": message["message_id"], "message": message})
+    return result[-HISTORY_LIMIT:]
 
 
 def required_settings_ready() -> bool:
@@ -160,7 +227,7 @@ async def heartbeat() -> None:
         await asyncio.sleep(30)
 
 
-async def backfill(client: TelegramClient, entity: Any) -> None:
+async def backfill(client: TelegramClient, entity: Any) -> int:
     messages = [message async for message in client.iter_messages(entity, limit=HISTORY_LIMIT)]
     messages.reverse()
     batch: list[dict[str, Any]] = []
@@ -173,6 +240,63 @@ async def backfill(client: TelegramClient, entity: Any) -> None:
             await deliver(batch)
             batch = []
     await deliver(batch)
+    return sum(1 for message in messages if (message.message or "").strip())
+
+
+async def run_history_backfill(session: str, keep_connected: bool = False) -> None:
+    global collector_client
+    client = TelegramClient(StringSession(session), API_ID, API_HASH)
+    if keep_connected:
+        collector_client = client
+    backfill_status.update(running=True, imported=0, error="")
+    try:
+        await client.connect()
+        if not await client.is_user_authorized():
+            raise RuntimeError("Требуется повторная авторизация Telegram-аккаунта")
+        if keep_connected:
+            report_client_status.update(connected=True, error="")
+        entity = await client.get_entity(TARGET_CHAT_ID)
+        imported = await backfill(client, entity)
+        backfill_status.update(running=False, imported=imported, error="")
+        if keep_connected:
+            await client.run_until_disconnected()
+    except asyncio.CancelledError:
+        raise
+    except Exception as exc:  # noqa: BLE001 - surfaced through health and setup page
+        backfill_status["error"] = str(exc)
+        if keep_connected:
+            report_client_status.update(connected=False, error=str(exc))
+    finally:
+        backfill_status["running"] = False
+        if client.is_connected():
+            await client.disconnect()
+        if keep_connected:
+            report_client_status["connected"] = False
+
+
+def start_history_backfill(session: str, keep_connected: bool = False) -> None:
+    global backfill_task
+    if backfill_task and not backfill_task.done():
+        return
+    backfill_task = asyncio.create_task(run_history_backfill(session, keep_connected=keep_connected))
+
+
+async def start_bridge_report_client() -> None:
+    """Keep a saved user session for history import and report delivery only."""
+    if not required_settings_ready():
+        collector_status["error"] = "Не заполнены обязательные настройки"
+        return
+    try:
+        session = await load_session()
+    except Exception as exc:  # noqa: BLE001 - surfaced through health
+        report_client_status["error"] = f"Не удалось получить сессию: {exc}"
+        return
+    if not session:
+        report_client_status["error"] = "Откройте /setup и войдите в Telegram"
+        return
+    # No NewMessage handler is installed here. The existing bridge remains the
+    # sole owner of live collection, avoiding duplicate production delivery.
+    start_history_backfill(session, keep_connected=True)
 
 
 async def run_collector(session: str) -> None:
@@ -235,40 +359,260 @@ async def start_saved_collector() -> None:
     collector_task = asyncio.create_task(run_collector(session))
 
 
-def require_setup_token(token: str) -> None:
-    if not SETUP_TOKEN or token != SETUP_TOKEN:
+def require_setup_token(token: str, authorization: str = "") -> None:
+    prefix = "Bearer "
+    header_token = authorization[len(prefix):] if authorization.startswith(prefix) else ""
+    supplied = header_token or token
+    if not SETUP_TOKEN or not secrets.compare_digest(supplied, SETUP_TOKEN):
         raise HTTPException(status_code=401, detail="Неверный ключ настройки")
 
 
 def page(title: str, body: str) -> HTMLResponse:
-    return HTMLResponse(f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>body{{margin:0;background:#f5f4fb;color:#171b2e;font:16px system-ui}}main{{max-width:520px;margin:8vh auto;padding:32px;background:#fff;border:1px solid #e6e2f1;border-radius:24px;box-shadow:0 18px 60px #49208018}}h1{{margin:0 0 8px}}p{{color:#667085;line-height:1.55}}label{{display:block;margin:18px 0 6px;font-weight:700}}input{{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d8d2e6;border-radius:12px;font:inherit}}button{{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font:700 16px system-ui;cursor:pointer}}.ok{{padding:14px;background:#eafaf3;color:#107458;border-radius:12px}}.error{{padding:14px;background:#fff4ea;color:#a34c00;border-radius:12px}}</style></head><body><main>{body}</main></body></html>""")
+    return HTMLResponse(
+        f"""<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{html.escape(title)}</title><style>body{{margin:0;background:#f5f4fb;color:#171b2e;font:16px system-ui}}main{{max-width:520px;margin:8vh auto;padding:32px;background:#fff;border:1px solid #e6e2f1;border-radius:24px;box-shadow:0 18px 60px #49208018}}h1{{margin:0 0 8px}}p{{color:#667085;line-height:1.55}}label{{display:block;margin:18px 0 6px;font-weight:700}}input{{width:100%;box-sizing:border-box;padding:13px;border:1px solid #d8d2e6;border-radius:12px;font:inherit}}button{{width:100%;margin-top:22px;padding:14px;border:0;border-radius:12px;background:#7c3aed;color:#fff;font:700 16px system-ui;cursor:pointer}}.ok{{padding:14px;background:#eafaf3;color:#107458;border-radius:12px}}.error{{padding:14px;background:#fff4ea;color:#a34c00;border-radius:12px}}</style></head><body><main>{body}</main></body></html>""",
+        headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+    )
+
+
+def code_form(token: str, phone: str) -> HTMLResponse:
+    return page(
+        "Введите код",
+        f"<h1>Введите код из Telegram</h1><p>Код отправлен на {html.escape(phone)}. "
+        "Если включён облачный пароль, укажите его ниже.</p>"
+        f"<form method='post' action='/setup/verify'><input type='hidden' name='token' value='{html.escape(token)}'>"
+        "<label>Код</label><input name='code' inputmode='numeric' autocomplete='one-time-code' required>"
+        "<label>Облачный пароль (если есть)</label><input name='password' type='password'>"
+        "<button type='submit'>Подключить аккаунт</button></form>",
+    )
+
+
+def qr_image_data(value: str) -> str:
+    image = qrcode.make(value)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def qr_page(token: str, url: str) -> HTMLResponse:
+    safe_token = html.escape(token)
+    image = qr_image_data(url)
+    return page(
+        "Вход по QR-коду",
+        "<h1>Подключение по QR-коду</h1>"
+        "<p>В Telegram на телефоне откройте <b>Настройки → Устройства → Подключить устройство</b> и отсканируйте этот код.</p>"
+        f"<img src='{image}' alt='QR-код Telegram' style='display:block;width:min(100%,320px);margin:24px auto'>"
+        "<p id='status' class='ok'>Ожидаю сканирование…</p>"
+        f"<script>const token={json.dumps(token)};const status=document.getElementById('status');"
+        "const poll=setInterval(async()=>{try{const response=await fetch('/setup/qr-status?token='+encodeURIComponent(token),{cache:'no-store'});"
+        "const data=await response.json();if(data.state==='done'){clearInterval(poll);location.href='/setup?token='+encodeURIComponent(token)}"
+        "else if(data.state==='password'){clearInterval(poll);location.href='/setup/qr-password?token='+encodeURIComponent(token)}"
+        "else if(data.state==='error'){clearInterval(poll);status.className='error';status.textContent=data.error||'QR-код истёк';}"
+        "}catch(error){status.className='error';status.textContent='Не удалось проверить состояние подключения';}},2000);</script>"
+        f"<p><a href='/setup/qr?token={safe_token}'>Создать новый QR-код</a></p>",
+    )
+
+
+async def finish_login(client: TelegramClient) -> None:
+    global login_client
+    session = client.session.save()
+    await save_session(session)
+    if client.is_connected():
+        await client.disconnect()
+    if login_client is client:
+        login_client = None
+    qr_login_status.update(state="done", error="")
+    if TELEGRAM_BOT_TOKEN:
+        start_history_backfill(session, keep_connected=True)
+    else:
+        await start_saved_collector()
+
+
+async def wait_for_qr_login(client: TelegramClient, pending_qr: Any) -> None:
+    try:
+        await pending_qr.wait(timeout=120)
+    except SessionPasswordNeededError:
+        qr_login_status.update(state="password", error="")
+        return
+    except asyncio.TimeoutError:
+        qr_login_status.update(state="error", error="QR-код истёк. Создайте новый код.")
+    except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
+        qr_login_status.update(state="error", error=f"Telegram отклонил QR-вход ({type(exc).__name__}).")
+    else:
+        await finish_login(client)
+        return
+    if client.is_connected():
+        await client.disconnect()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    await start_saved_collector()
+    if TELEGRAM_BOT_TOKEN:
+        collector_status.update(
+            authorized=True,
+            connected=False,
+            account="@uzum_franchise_support_bot",
+            group="Uzum Franchise Chat",
+            error="Ожидание связи с bridge",
+        )
+        await start_bridge_report_client()
+    else:
+        await start_saved_collector()
     yield
     global collector_task
     if collector_task:
         collector_task.cancel()
     if collector_client and collector_client.is_connected():
         await collector_client.disconnect()
+    if backfill_task:
+        backfill_task.cancel()
+    if qr_wait_task:
+        qr_wait_task.cancel()
 
 
 app = FastAPI(title="Telemeric Uzum Collector", lifespan=lifespan)
 
 
+def require_bridge_token(authorization: str) -> None:
+    prefix = "Bearer "
+    supplied = authorization[len(prefix):] if authorization.startswith(prefix) else ""
+    if not TELEGRAM_BOT_TOKEN or not secrets.compare_digest(supplied, TELEGRAM_BOT_TOKEN):
+        raise HTTPException(status_code=401, detail="Неверный ключ bridge")
+
+
+@app.post("/bridge/ingest")
+async def bridge_ingest(
+    payload: dict[str, Any],
+    authorization: str = Header(default=""),
+) -> dict[str, Any]:
+    require_bridge_token(authorization)
+    updates = payload.get("updates")
+    if not isinstance(updates, list):
+        raise HTTPException(status_code=400, detail="updates must be a list")
+    account = str(payload.get("account") or "@uzum_franchise_support_bot")
+    group_title = str(payload.get("groupTitle") or "Uzum Franchise Chat")
+    collector_status.update(
+        authorized=True,
+        connected=True,
+        account=account,
+        group=group_title,
+        error="",
+    )
+    if updates:
+        await deliver(updates)
+    else:
+        await site_request("POST", "/api/telegram/ingest", {
+            "updates": [],
+            "account": account,
+            "groupTitle": group_title,
+        })
+    return {"ok": True, "accepted": len(updates)}
+
+
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    return {"ok": True, "settingsReady": required_settings_ready(), **collector_status}
+    return {
+        "ok": True,
+        "settingsReady": required_settings_ready(),
+        "reportClient": report_client_status,
+        **collector_status,
+        "historyImport": backfill_status,
+    }
 
 
 @app.get("/setup", response_class=HTMLResponse)
 async def setup(token: str = Query(default="")) -> HTMLResponse:
     require_setup_token(token)
-    if collector_status.get("connected"):
+    if collector_status.get("connected") and not TELEGRAM_BOT_TOKEN:
         return page("Telemeric Uzum", f"<h1>Telegram подключён</h1><p class='ok'>{html.escape(str(collector_status.get('account')))} читает группу {html.escape(str(collector_status.get('group')))}.</p>")
-    return page("Подключение Telegram", f"<h1>Подключение Telegram</h1><p>Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны.</p><form method='post' action='/setup/send-code'><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>")
+    if backfill_status["running"]:
+        return page("Импорт истории", "<h1>История загружается</h1><p class='ok'>Можно закрыть страницу. Импорт продолжится в фоне.</p>")
+    description = "Введите номер аккаунта, который уже состоит в нужной группе. Он будет использован только для однократной загрузки старой истории." if TELEGRAM_BOT_TOKEN else "Введите номер аккаунта, который уже состоит в нужной группе. Права администратора не нужны."
+    upload = f"<hr><h2>Или загрузите экспорт</h2><p>Поддерживается JSON из Telegram Desktop.</p><form method='post' action='/setup/import-json' enctype='multipart/form-data'><input type='hidden' name='token' value='{html.escape(token)}'><input name='file' type='file' accept='.json,application/json' required><button type='submit'>Загрузить историю JSON</button></form>"
+    qr = f"<a href='/setup/qr?token={html.escape(token)}' style='display:block;text-align:center;margin-top:18px'>Войти по QR-коду без SMS</a>"
+    return page("Подключение Telegram", f"<h1>Импорт истории Telegram</h1><p>{html.escape(description)}</p><form method='post' action='/setup/send-code' onsubmit=\"const button=this.querySelector('button');button.disabled=true;button.textContent='Отправляем код…'\"><input type='hidden' name='token' value='{html.escape(token)}'><label>Номер телефона</label><input name='phone' type='tel' placeholder='+998901234567' required><button type='submit'>Получить код в Telegram</button></form>{qr}{upload}")
+
+
+@app.get("/setup/qr", response_class=HTMLResponse)
+async def setup_qr(token: str = Query(default="")) -> HTMLResponse:
+    global login_client, login_phone, login_code_hash, qr_login, qr_wait_task
+    require_setup_token(token)
+    if not API_ID or not API_HASH:
+        return page("Нет API-настроек", "<h1>Нужны Telegram API ID и API Hash</h1><p class='error'>Сначала заполните секреты сервиса в Render.</p>")
+    async with login_lock:
+        if qr_wait_task and not qr_wait_task.done() and qr_login and qr_login_status["state"] == "waiting":
+            return qr_page(token, qr_login.url)
+        if login_client and login_client.is_connected():
+            await login_client.disconnect()
+        login_phone = ""
+        login_code_hash = ""
+        login_client = TelegramClient(StringSession(), API_ID, API_HASH)
+        await login_client.connect()
+        qr_login = await login_client.qr_login()
+        qr_login_status.update(state="waiting", error="")
+        qr_wait_task = asyncio.create_task(wait_for_qr_login(login_client, qr_login))
+        return qr_page(token, qr_login.url)
+
+
+@app.get("/setup/qr-status")
+async def setup_qr_status(token: str = Query(default="")) -> dict[str, str]:
+    require_setup_token(token)
+    return dict(qr_login_status)
+
+
+@app.get("/setup/qr-password", response_class=HTMLResponse)
+async def setup_qr_password(token: str = Query(default="")) -> HTMLResponse:
+    require_setup_token(token)
+    if qr_login_status["state"] != "password":
+        return page("QR-вход не активен", f"<h1>Сначала отсканируйте QR-код</h1><a href='/setup/qr?token={html.escape(token)}'>Открыть QR-код</a>")
+    return page(
+        "Облачный пароль Telegram",
+        "<h1>Введите облачный пароль Telegram</h1><p>Он нужен только для завершения QR-входа.</p>"
+        f"<form method='post' action='/setup/qr-password'><input type='hidden' name='token' value='{html.escape(token)}'>"
+        "<label>Облачный пароль</label><input name='password' type='password' autocomplete='current-password' required>"
+        "<button type='submit'>Завершить подключение</button></form>",
+    )
+
+
+@app.post("/setup/qr-password", response_class=HTMLResponse)
+async def verify_qr_password(token: str = Form(...), password: str = Form(...)) -> HTMLResponse:
+    require_setup_token(token)
+    if not login_client or not login_client.is_connected() or qr_login_status["state"] != "password":
+        return page("Сессия истекла", f"<h1>Начните заново</h1><a href='/setup/qr?token={html.escape(token)}'>Открыть новый QR-код</a>")
+    try:
+        await login_client.sign_in(password=password)
+    except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
+        return page(
+            "Пароль не принят",
+            "<h1>Telegram не принял пароль</h1>"
+            f"<p class='error'>{html.escape(type(exc).__name__)}</p>"
+            f"<a href='/setup/qr-password?token={html.escape(token)}'>Попробовать снова</a>",
+        )
+    await finish_login(login_client)
+    return page("Готово", "<h1>Аккаунт подключён</h1><p class='ok'>Импорт истории запущен.</p>")
+
+
+@app.post("/setup/import-json", response_class=HTMLResponse)
+async def import_json(token: str = Form(...), file: UploadFile = File(...)) -> HTMLResponse:
+    require_setup_token(token)
+    raw = await file.read(10_000_001)
+    if len(raw) > 10_000_000:
+        return page("Файл слишком большой", "<h1>Файл слишком большой</h1><p class='error'>Максимальный размер — 10 МБ.</p>")
+    try:
+        payload = json.loads(raw.decode("utf-8-sig"))
+        updates = telegram_export_updates(payload)
+    except (UnicodeDecodeError, json.JSONDecodeError, AttributeError, TypeError, ValueError) as exc:
+        return page("Ошибка файла", f"<h1>Не удалось прочитать JSON</h1><p class='error'>{html.escape(str(exc))}</p>")
+    if not updates:
+        return page("Нет сообщений", "<h1>Сообщения не найдены</h1><p class='error'>Нужен экспорт чата в формате JSON из Telegram Desktop.</p>")
+    backfill_status.update(running=True, imported=0, error="")
+    try:
+        for start in range(0, len(updates), 100):
+            await deliver(updates[start:start + 100])
+        backfill_status.update(running=False, imported=len(updates), error="")
+    except Exception as exc:  # noqa: BLE001
+        backfill_status.update(running=False, error=str(exc))
+        return page("Ошибка импорта", f"<h1>Импорт не завершён</h1><p class='error'>{html.escape(str(exc))}</p>")
+    return page("Готово", f"<h1>История загружена</h1><p class='ok'>Передано сообщений: {len(updates)}. Откройте кабинет и обновите страницу.</p>")
 
 
 @app.post("/setup/send-code", response_class=HTMLResponse)
@@ -277,14 +621,42 @@ async def send_code(token: str = Form(...), phone: str = Form(...)) -> HTMLRespo
     require_setup_token(token)
     if not API_ID or not API_HASH:
         return page("Нет API-настроек", "<h1>Нужны Telegram API ID и API Hash</h1><p class='error'>Сначала заполните секреты сервиса в Render.</p>")
-    if login_client and login_client.is_connected():
-        await login_client.disconnect()
-    login_client = TelegramClient(StringSession(), API_ID, API_HASH)
-    await login_client.connect()
-    sent = await login_client.send_code_request(phone)
-    login_phone = phone
-    login_code_hash = sent.phone_code_hash
-    return page("Введите код", f"<h1>Введите код из Telegram</h1><p>Код отправлен на {html.escape(phone)}. Если включён облачный пароль, укажите его ниже.</p><form method='post' action='/setup/verify'><input type='hidden' name='token' value='{html.escape(token)}'><label>Код</label><input name='code' inputmode='numeric' autocomplete='one-time-code' required><label>Облачный пароль (если есть)</label><input name='password' type='password'><button type='submit'>Подключить аккаунт</button></form>")
+    async with login_lock:
+        if login_client and login_client.is_connected() and login_phone == phone and login_code_hash:
+            return code_form(token, phone)
+        if login_client and login_client.is_connected():
+            await login_client.disconnect()
+        login_client = TelegramClient(StringSession(), API_ID, API_HASH)
+        try:
+            await login_client.connect()
+            sent = await login_client.send_code_request(phone)
+        except PhonePasswordFloodError:
+            if login_client.is_connected():
+                await login_client.disconnect()
+            login_client = None
+            login_phone = ""
+            login_code_hash = ""
+            return page(
+                "Лимит Telegram",
+                "<h1>Telegram временно ограничил вход по коду</h1>"
+                "<p class='error'>Лимит попыток действует до следующего дня. Не запрашивайте новые коды сейчас.</p>"
+                f"<a href='/setup/qr?token={html.escape(token)}'>Войти по QR-коду без SMS</a>",
+            )
+        except Exception as exc:  # noqa: BLE001 - user-facing boundary for Telegram errors
+            if login_client.is_connected():
+                await login_client.disconnect()
+            login_client = None
+            login_phone = ""
+            login_code_hash = ""
+            return page(
+                "Не удалось отправить код",
+                "<h1>Код пока не отправлен</h1>"
+                f"<p class='error'>Telegram отклонил подключение ({html.escape(type(exc).__name__)}).</p>"
+                f"<a href='/setup?token={html.escape(token)}'>Вернуться к подключению</a>",
+            )
+        login_phone = phone
+        login_code_hash = sent.phone_code_hash
+        return code_form(token, phone)
 
 
 @app.post("/setup/verify", response_class=HTMLResponse)
@@ -303,6 +675,9 @@ async def verify(token: str = Form(...), code: str = Form(...), password: str = 
     await save_session(session)
     await login_client.disconnect()
     login_client = None
+    if TELEGRAM_BOT_TOKEN:
+        start_history_backfill(session, keep_connected=True)
+        return page("Готово", f"<h1>Импорт запущен</h1><p class='ok'>Загружаются последние {HISTORY_LIMIT} сообщений группы. Новые сообщения продолжает получать рабочий бот.</p>")
     await start_saved_collector()
     return page("Готово", "<h1>Аккаунт подключён</h1><p class='ok'>Сборщик загружает историю и новые сообщения выбранной группы. Кабинет начнёт обновляться автоматически.</p>")
 
