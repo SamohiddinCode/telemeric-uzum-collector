@@ -5,6 +5,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from fastapi import Header, HTTPException, Query
@@ -13,6 +14,7 @@ import main as collector
 from analytics_config import ReportConfig
 from analytics_store import MessageStore
 from daily_report import DailyReportService
+from faq_shadow import FAQKnowledgeBase, FAQShadowAssistant
 from google_sheets_writer import GoogleSheetsWriter
 from telegram_bot_sender import TelegramBotSender
 
@@ -23,9 +25,42 @@ message_store = MessageStore(os.getenv("ANALYTICS_DB_PATH", "/tmp/telemeric/anal
 sheets_writer = GoogleSheetsWriter.from_env()
 report_service = DailyReportService(message_store, report_config, sheets_writer=sheets_writer)
 bot_sender = TelegramBotSender(collector.TELEGRAM_BOT_TOKEN) if collector.TELEGRAM_BOT_TOKEN else None
+faq_shadow_enabled = os.getenv("FAQ_SHADOW_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+faq_shadow_recipient_id = int(os.getenv("FAQ_SHADOW_RECIPIENT_ID", "8419189523"))
+faq_shadow_threshold = float(os.getenv("FAQ_SHADOW_MIN_CONFIDENCE", "0.58"))
+faq_shadow_max_age_seconds = int(os.getenv("FAQ_SHADOW_MAX_AGE_SECONDS", "600"))
+faq_shadow: FAQShadowAssistant | None = None
+if faq_shadow_enabled and bot_sender:
+    knowledge_base_path = os.getenv(
+        "FAQ_KNOWLEDGE_BASE_PATH",
+        str(Path(__file__).with_name("faq_knowledge_base.json")),
+    )
+    faq_shadow = FAQShadowAssistant(
+        FAQKnowledgeBase(knowledge_base_path),
+        bot_sender,
+        source_chat_id=report_config.source_chat_id,
+        recipient_id=faq_shadow_recipient_id,
+        threshold=faq_shadow_threshold,
+        max_age_seconds=faq_shadow_max_age_seconds,
+        ignored_usernames=report_config.agent_usernames | report_config.service_bot_usernames,
+    )
+elif faq_shadow_enabled:
+    logger.warning("FAQ shadow mode requested but Telegram bot sender is not configured")
+
+faq_shadow_tasks: set[asyncio.Task] = set()
 
 _original_deliver = collector.deliver
 _original_lifespan = collector.app.router.lifespan_context
+
+
+def finish_faq_shadow_task(task: asyncio.Task) -> None:
+    faq_shadow_tasks.discard(task)
+    if task.cancelled():
+        return
+    try:
+        task.result()
+    except Exception:
+        logger.exception("Unexpected FAQ shadow task failure")
 
 
 async def refresh_analytics_cache(day) -> int:
@@ -69,6 +104,10 @@ async def deliver_with_analytics(updates):
         message_store.record_updates(updates)
     except Exception:
         logger.exception("Analytics cache write failed; collector delivery remains healthy")
+    if faq_shadow:
+        task = asyncio.create_task(faq_shadow.handle_updates(updates))
+        faq_shadow_tasks.add(task)
+        task.add_done_callback(finish_faq_shadow_task)
 
 
 async def report_runner() -> None:
@@ -106,6 +145,11 @@ async def analytics_lifespan(application):
                     await report_task
                 except asyncio.CancelledError:
                     pass
+            pending_faq_tasks = tuple(faq_shadow_tasks)
+            for task in pending_faq_tasks:
+                task.cancel()
+            if pending_faq_tasks:
+                await asyncio.gather(*pending_faq_tasks, return_exceptions=True)
 
 
 app.router.lifespan_context = analytics_lifespan
@@ -119,6 +163,49 @@ def parse_report_date(value: str | None):
         return datetime.strptime(value, "%Y-%m-%d").date()
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="date must be YYYY-MM-DD") from exc
+
+
+@app.get("/faq-shadow/status")
+async def faq_shadow_status(
+    token: str = Query(default=""),
+    authorization: str = Header(default=""),
+):
+    collector.require_setup_token(token, authorization)
+    return {
+        "enabled": faq_shadow is not None,
+        "mode": "private-preview",
+        "sourceChatId": report_config.source_chat_id,
+        "recipientId": faq_shadow_recipient_id,
+        "minConfidence": faq_shadow_threshold,
+        "knowledgeBaseEntries": faq_shadow.entry_count if faq_shadow else 0,
+        "groupRepliesEnabled": False,
+    }
+
+
+@app.post("/faq-shadow/test")
+async def faq_shadow_test(
+    payload: dict,
+    token: str = Query(default=""),
+    authorization: str = Header(default=""),
+):
+    collector.require_setup_token(token, authorization)
+    if not faq_shadow:
+        raise HTTPException(status_code=503, detail="FAQ shadow mode is not enabled")
+    question = str(payload.get("question") or "").strip()
+    if not question or len(question) > 1000:
+        raise HTTPException(status_code=400, detail="question must contain 1-1000 characters")
+    try:
+        match = await faq_shadow.send_test_question(question)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {
+        "sent": True,
+        "recipientId": faq_shadow_recipient_id,
+        "topicId": match.entry["id"],
+        "language": match.language,
+        "confidence": match.confidence,
+        "groupRepliesEnabled": False,
+    }
 
 
 @app.get("/analytics/status")

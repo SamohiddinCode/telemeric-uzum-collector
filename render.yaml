@@ -56,3 +56,13 @@ services:
         sync: false
       - key: GOOGLE_SHEETS_WEBHOOK_SECRET
         sync: false
+      - key: FAQ_SHADOW_ENABLED
+        value: false
+      - key: FAQ_SHADOW_RECIPIENT_ID
+        value: 8419189523
+      - key: FAQ_SHADOW_MIN_CONFIDENCE
+        value: 0.58
+      - key: FAQ_SHADOW_MAX_AGE_SECONDS
+        value: 600
+      - key: FAQ_KNOWLEDGE_BASE_PATH
+        value: faq_knowledge_base.json

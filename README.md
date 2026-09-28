@@ -63,6 +63,30 @@ the target spreadsheet, store the same random secret in the script property
 `GOOGLE_SHEETS_WEBHOOK_URL`. Spreadsheet failures are logged after Telegram
 delivery and never suppress the Telegram report.
 
+## FAQ private-preview mode
+
+The optional FAQ assistant watches new partner messages from the configured source group but never
+replies in that group. When an approved answer is matched with sufficient confidence, the bot sends
+the original question, matched topic, confidence, and suggested RU/UZ answer to the private test
+recipient.
+
+- `FAQ_SHADOW_ENABLED` — enables private previews only; group replies remain disabled in code.
+- `FAQ_SHADOW_RECIPIENT_ID` — Telegram user ID receiving previews (default `8419189523`).
+- `FAQ_SHADOW_MIN_CONFIDENCE` — minimum match confidence (default `0.58`).
+- `FAQ_SHADOW_MAX_AGE_SECONDS` — rejects replayed or old updates (default `600`).
+- `FAQ_KNOWLEDGE_BASE_PATH` — generated JSON knowledge-base path.
+
+The approved DOCX can be re-imported without runtime dependencies:
+
+```bash
+python scripts/import_faq_docx.py "Скрипты ответов.docx" faq_knowledge_base.json
+```
+
+Protected diagnostics:
+
+- `GET /faq-shadow/status`
+- `POST /faq-shadow/test` with JSON `{ "question": "Инкассатор не приехал, что делать?" }`
+
 Keep `DAILY_REPORT_ENABLED=false` until the destination group has been verified and
 a manual report has been checked. The original Telegram -> Site delivery continues
 even if analytics cache writes or report rendering fail.
