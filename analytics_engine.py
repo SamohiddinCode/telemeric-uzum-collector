@@ -341,6 +341,7 @@ def build_metrics(messages: list[dict[str, Any]], config: ReportConfig) -> dict[
         "unlinked_support_replies": len(support_reply_messages) - linked_support_replies,
         "unlinked_reply_targets": len(unlinked_reply_targets),
         "unanswered": len(unanswered),
+        "unanswered_tickets": unanswered,
         "sla_ok": len(sla_ok),
         "sla_breaches": total_tickets - len(sla_ok),
         "sla_percent": (len(sla_ok) / total_tickets * 100) if total_tickets else None,

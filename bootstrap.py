@@ -245,6 +245,22 @@ async def analytics_status(
             "unlinkedSupportReplies": metrics["unlinked_support_replies"],
             "unlinkedReplyTargets": metrics["unlinked_reply_targets"],
             "unanswered": metrics["unanswered"],
+            "unansweredItems": [
+                {
+                    "ticketId": ticket.id,
+                    "openedAt": ticket.opened_at,
+                    "customer": ticket.customer_name,
+                    "messages": [
+                        {
+                            "messageId": message.get("message_id"),
+                            "username": message.get("username"),
+                            "text": message.get("text"),
+                        }
+                        for message in ticket.messages
+                    ],
+                }
+                for ticket in metrics.get("unanswered_tickets", [])
+            ],
             "slaPercent": metrics["sla_percent"],
             "slaCompliant": metrics["sla_ok"],
             "medianResponseMinutes": metrics["median_minutes"],

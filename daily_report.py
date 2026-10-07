@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
 import tempfile
 from datetime import date, datetime, time, timedelta
@@ -15,6 +16,7 @@ from report_renderer import ReportRenderer
 
 
 TELEGRAM_CAPTION_SAFE_LIMIT = 1000
+TELEGRAM_MESSAGE_SAFE_LIMIT = 3900
 logger = logging.getLogger("telemeric.analytics")
 
 
@@ -26,6 +28,65 @@ def _fit_commentary(prefix: str, commentary: str) -> str:
     if len(commentary) <= available:
         return prefix + commentary
     return prefix + commentary[: available - 1].rstrip() + "…"
+
+
+def _ticket_question(ticket: Any) -> str:
+    return " ".join(
+        str(message.get("text") or "").strip()
+        for message in ticket.messages
+        if str(message.get("text") or "").strip()
+    ).strip()
+
+
+def _message_link(chat_id: int, message_id: int) -> str:
+    raw = str(abs(chat_id))
+    internal_id = raw[3:] if raw.startswith("100") else raw
+    return f"https://t.me/c/{internal_id}/{message_id}"
+
+
+def build_unanswered_messages(
+    metrics: dict[str, Any],
+    config: ReportConfig,
+    day: date,
+) -> list[str]:
+    """Build Telegram-safe HTML chunks listing every qualified unanswered ticket."""
+    tickets = metrics.get("unanswered_tickets") or []
+    if not tickets:
+        return []
+
+    header = (
+        f"❗ <b>Обращения без первого ответа — {day.strftime('%d.%m.%Y')}</b>\n"
+        f"Смена: {metrics.get('shift_start', config.workday_start)}–"
+        f"{metrics.get('shift_end', config.workday_end)}. "
+        "Включены только квалифицированные обращения партнёров к поддержке.\n\n"
+    )
+    entries: list[str] = []
+    tz = ZoneInfo(config.timezone)
+    for index, ticket in enumerate(tickets, 1):
+        first = ticket.messages[0] if ticket.messages else {}
+        username = str(first.get("username") or "").strip().lstrip("@")
+        author = f"@{username}" if username else ticket.customer_name
+        opened = datetime.fromtimestamp(ticket.opened_at, tz).strftime("%H:%M")
+        question = _ticket_question(ticket) or "Текст обращения отсутствует"
+        message_id = int(first.get("message_id") or 0)
+        link = _message_link(config.source_chat_id, message_id) if message_id else ""
+        link_line = f'\n<a href="{html.escape(link, quote=True)}">Открыть сообщение</a>' if link else ""
+        entries.append(
+            f"<b>{index}. {opened} · {html.escape(author)}</b>\n"
+            f"{html.escape(question)}{link_line}\n\n"
+        )
+
+    chunks: list[str] = []
+    current = header
+    for entry in entries:
+        if len(current) + len(entry) > TELEGRAM_MESSAGE_SAFE_LIMIT and current != header:
+            chunks.append(current.rstrip())
+            current = header + entry
+        else:
+            current += entry
+    if current != header:
+        chunks.append(current.rstrip())
+    return chunks
 
 
 def parse_time(value: str) -> time:
@@ -179,6 +240,8 @@ class DailyReportService:
             recipient = report_chat_id or self.config.report_chat_id
             if hasattr(client, "send_report"):
                 await client.send_report(recipient, paths, caption)
+                for message in build_unanswered_messages(metrics, self.config, day):
+                    await client.send_message(recipient, message)
             else:
                 target = await client.get_entity(recipient)
                 try:
@@ -187,6 +250,8 @@ class DailyReportService:
                     await client.send_message(target, caption, parse_mode="html")
                     for path in paths:
                         await client.send_file(target, path)
+                for message in build_unanswered_messages(metrics, self.config, day):
+                    await client.send_message(target, message, parse_mode="html")
         sheet_saved = False
         if self.sheets_writer is not None:
             try:

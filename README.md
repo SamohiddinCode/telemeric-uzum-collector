@@ -40,7 +40,11 @@ The report uses the configured workday window and sends three PNG images:
 
 1. Executive summary: tickets, SLA, median response, unanswered and top categories.
 2. Load & response: hourly traffic, response-time metrics and shift-quality indicators.
-3. Details: top questions, top solutions and the longest SLA breaches.
+3. Details: top questions, root causes, the longest SLA breaches, and unanswered questions.
+
+When qualified partner requests remain unanswered, the bot also sends a separate
+Telegram message after the three-image album. It includes the time, partner,
+question text, and a link to the original group message for every unanswered ticket.
 
 Important settings:
 

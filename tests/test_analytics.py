@@ -43,6 +43,8 @@ class AnalyticsTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["median_minutes"], 18.5)
         self.assertAlmostEqual(metrics["faq_coverage_percent"], 100.0)
         self.assertTrue(metrics["agent_configured"])
+        self.assertEqual(len(metrics["unanswered_tickets"]), 1)
+        self.assertEqual(metrics["unanswered_tickets"][0].customer_name, "Partner C")
 
     def test_sla_scope_excludes_partner_dialogue_chatter_and_automation(self):
         messages = [
@@ -174,6 +176,62 @@ class AnalyticsTests(unittest.TestCase):
 
 
 class ReportDeliveryTests(unittest.IsolatedAsyncioTestCase):
+    async def test_sends_unanswered_question_details_after_album(self):
+        config = ReportConfig(
+            -1002707306458,
+            8419189523,
+            agent_usernames={"uzum_franchise"},
+        )
+        tz = ZoneInfo("Asia/Tashkent")
+        opened = int(datetime(2026, 10, 6, 15, 42, tzinfo=tz).timestamp())
+
+        with tempfile.TemporaryDirectory() as tmp:
+            store = MessageStore(str(Path(tmp) / "analytics.sqlite3"))
+            store.record_updates([
+                {
+                    "message": {
+                        "message_id": 77,
+                        "date": opened,
+                        "text": "@uzum_franchise, проверьте статус выплаты",
+                        "chat": {"id": config.source_chat_id},
+                        "from": {
+                            "id": 100,
+                            "first_name": "Partner",
+                            "username": "partner_one",
+                            "is_bot": False,
+                        },
+                    }
+                },
+            ])
+
+            class Client:
+                album = None
+                messages = []
+
+                async def send_report(self, chat_id, paths, caption):
+                    self.album = (chat_id, len(paths), caption)
+
+                async def send_message(self, chat_id, text):
+                    self.messages.append((chat_id, text))
+
+            client = Client()
+            service = DailyReportService(store, config)
+            result = await service.send_day(
+                client,
+                date(2026, 10, 6),
+                force=True,
+                report_chat_id=8419189523,
+            )
+
+        self.assertTrue(result["sent"])
+        self.assertEqual(client.album[:2], (8419189523, 3))
+        self.assertEqual(len(client.messages), 1)
+        self.assertEqual(client.messages[0][0], 8419189523)
+        self.assertIn("Обращения без первого ответа — 06.10.2026", client.messages[0][1])
+        self.assertIn("15:42 · @partner_one", client.messages[0][1])
+        self.assertIn("проверьте статус выплаты", client.messages[0][1])
+        self.assertIn("https://t.me/c/2707306458/77", client.messages[0][1])
+
     async def test_caption_is_russian_attached_and_explains_scope(self):
         config = ReportConfig(
             -1002707306458,

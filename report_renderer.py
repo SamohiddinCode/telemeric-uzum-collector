@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import textwrap
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -226,25 +227,43 @@ class ReportRenderer:
         delays: list[Ticket] = m["delays"]
         if not delays:
             draw.text((830, y), "Просрочек с ответом не найдено", font=self.font(19), fill=self.GREEN)
-            y += 42
-        for ticket in delays[:4]:
+        for ticket in delays[:3]:
             draw.text(
                 (830, y),
                 f"#{ticket.id} · {ticket.customer_name[:18]} · {(ticket.response_minutes or 0):.1f} мин",
-                font=self.font(18),
+                font=self.font(16),
                 fill=self.RED,
             )
             question = " ".join(str(x.get("text") or "") for x in ticket.messages)
-            draw.text((850, y + 27), self.wrap(question, 66)[0], font=self.font(15), fill=self.MUTED)
-            y += 57
-        if len(delays) > 4:
-            draw.text((850, y), f"Ещё просрочек с ответом: {len(delays) - 4}", font=self.font(16), fill=self.MUTED)
-            y += 30
-        unanswered_y = max(y + 8, 845)
+            draw.text((845, y + 24), self.wrap(question, 35)[0], font=self.font(13), fill=self.MUTED)
+            y += 55
+        if len(delays) > 3:
+            draw.text((845, y), f"Ещё с просрочкой: {len(delays) - 3}", font=self.font(14), fill=self.MUTED)
+
+        draw.line((1160, 590, 1160, 890), fill=self.BORDER, width=2)
+        unanswered: list[Ticket] = m.get("unanswered_tickets") or []
         draw.text(
-            (830, unanswered_y),
-            f"Без первого ответа: {m['unanswered']} — также нарушение SLA",
-            font=self.font(18),
-            fill=self.RED if m["unanswered"] else self.GREEN,
+            (1190, 592),
+            f"Без ответа: {len(unanswered)}",
+            font=self.font(19),
+            fill=self.RED if unanswered else self.GREEN,
         )
+        uy = 630
+        if not unanswered:
+            draw.text((1190, uy), "Все обращения обработаны", font=self.font(17), fill=self.GREEN)
+        for ticket in unanswered[:4]:
+            opened = datetime.fromtimestamp(ticket.opened_at, ZoneInfo(c.timezone)).strftime("%H:%M")
+            draw.text(
+                (1190, uy),
+                f"{opened} · {ticket.customer_name[:20]}",
+                font=self.font(15),
+                fill=self.RED,
+            )
+            question = " ".join(str(x.get("text") or "") for x in ticket.messages)
+            for line in self.wrap(question, 31)[:2]:
+                draw.text((1205, uy + 22), line, font=self.font(13), fill=self.MUTED)
+                uy += 18
+            uy += 28
+        if len(unanswered) > 4:
+            draw.text((1205, uy), f"Ещё без ответа: {len(unanswered) - 4}", font=self.font(14), fill=self.MUTED)
         image.save(out, "PNG", optimize=True)
