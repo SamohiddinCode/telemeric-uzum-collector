@@ -18,6 +18,8 @@ from report_renderer import ReportRenderer
 TELEGRAM_CAPTION_SAFE_LIMIT = 1000
 TELEGRAM_MESSAGE_SAFE_LIMIT = 3900
 logger = logging.getLogger("telemeric.analytics")
+REPORT_RETRY_INTERVAL = timedelta(minutes=5)
+REPORT_RETRY_COUNT = 6  # Six retries after the initial attempt, through 19:30.
 
 
 def _fit_commentary(prefix: str, commentary: str) -> str:
@@ -276,15 +278,39 @@ class DailyReportService:
     async def run(self, client: Any) -> None:
         tz = ZoneInfo(self.config.timezone)
         report_clock = parse_time(self.config.report_time)
+        attempted_day: date | None = None
+        attempted_slots: set[int] = set()
         while True:
             now = datetime.now(tz)
+            if attempted_day != now.date():
+                attempted_day = now.date()
+                attempted_slots.clear()
             scheduled = datetime.combine(now.date(), report_clock, tzinfo=tz)
-            # Do not resend today's report merely because Render restarted long
-            # after the scheduled run.  A ten-minute delivery window still
-            # tolerates brief deploys or cold starts around report time.
-            delivery_deadline = scheduled + timedelta(minutes=10)
-            if scheduled <= now < delivery_deadline and self.last_sent_day != now.date():
-                await self.send_day(client, now.date())
-            elif now >= delivery_deadline and self.last_sent_day is None:
-                self.last_sent_day = now.date()
+            last_attempt = scheduled + REPORT_RETRY_INTERVAL * REPORT_RETRY_COUNT
+
+            if scheduled <= now <= last_attempt and self.last_sent_day != now.date():
+                elapsed = now - scheduled
+                slot = min(
+                    int(elapsed.total_seconds() // REPORT_RETRY_INTERVAL.total_seconds()),
+                    REPORT_RETRY_COUNT,
+                )
+                if slot not in attempted_slots:
+                    attempted_slots.add(slot)
+                    try:
+                        result = await self.send_day(client, now.date())
+                    except Exception:
+                        logger.exception(
+                            "Daily report attempt %s/%s failed for %s; will retry",
+                            slot + 1,
+                            REPORT_RETRY_COUNT + 1,
+                            now.date(),
+                        )
+                    else:
+                        if result.get("sent"):
+                            logger.info("Daily report sent successfully for %s", now.date())
+                        elif result.get("reason") == "already-sent":
+                            self.last_sent_day = now.date()
+
+            # Polling at most every 30 seconds gives a small tolerance for cold
+            # starts while preserving a single attempt in each five-minute slot.
             await asyncio.sleep(30)

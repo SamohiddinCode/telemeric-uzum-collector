@@ -51,7 +51,8 @@ Important settings:
 - `REPORT_CHAT_ID` — destination Telegram group. Defaults to the source group.
 - `REPORT_TIMEZONE=Asia/Tashkent`.
 - `WORKDAY_START=10:00`, `WORKDAY_END=19:00`.
-- `REPORT_TIME=19:05`.
+- `REPORT_TIME=19:00`. If delivery fails, the bot retries every 5 minutes through
+  19:30 and stops retrying after the first successful report.
 - `SLA_TARGET_MINUTES=15`. SLA считается как доля всех квалифицированных обращений
   партнёров, получивших первый ответ поддержки не позднее чем через 15 минут.
 - `REPORT_MENTIONS=@Ddmit05` — упоминания в подписи к альбому отчёта.
