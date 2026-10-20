@@ -1,0 +1,386 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "id": 1,
+      "question_ru": "ПОЧЕМУ НЕ ИДУТ КЛИЕНТЫ ?",
+      "question_uz": "Nega klientlar soni kamaydi?",
+      "answer_ru": "Уважаемый партнер! Давайте разберем причину низкого потока клиента.\n\nЧаще всего низкий поток клиентов связан с несколькими причинами, например:\n\nПВЗ недостаточно заметен для клиентов (вывеска, навигация, расположение входа);\n\nПВЗ некорректно отображается на карте или в геолокации.\n\nЧтобы исправить ситуацию и привлечь больше клиентов, рекомендуем:\n\nпроверить корректность отображения ПВЗ в приложении и на карте;\n\nобеспечить хорошую видимость точки: установить вывеску, указатели и другие элементы навигации;\n\nиспользовать рекламные материалы (листовки) для привлечения клиентов. Все доступные макеты и материалы размещены по ссылке.\n\nНам действительно важно, чтобы ваш ПВЗ работал эффективно. Если после этих шагов поток клиентов не увеличится — напишите нам, и мы разберём вашу ситуацию детальнее.",
+      "answer_uz": "Hurmatli hamkor! Bizlar sizga qanday sabalarga ko’ra bunday xolat yuzaga kelishi mumkinligini ko’rib chiqamiz .\n\nKo'pincha mijozlar oqimining kamligi quyidagi sabablarga bog'liq bo'ladi:\n\nBTP xaritada yoki geolokatsiyada noto'g'ri aks etayotgan bo'lishi mumkin.\n\nBTP mijozlar uchun yetarlicha ko'rinmayotgan bo'lishi mumkin (peshlavha, yo'nalish ko'rsatkichlari, kirish joyining joylashuvi);\n\nVaziyatni tuzatish va ko'proq mijozlarni jalb qilish uchun quyidagilarni tavsiya qilamiz:\n\nilova va xaritada BTP to'g'ri aks etayotganini tekshiring;\n\nBTP ning yaxshi ko'rinishini ta'minlang: peshlavha, yo'nalish ko'rsatkichlari va boshqa navigatsiya elementlarini o'rnating;\n\nmijozlarni jalb qilish uchun reklama materiallari (flyerlar)dan foydalaning. Barcha mavjud maketlar va materiallar quyidagi havola orqali joylashtirilgan.\n\nSizning BTP ingiz samarali ishlashi biz uchun ham muhim. Agar ushbu qadamlardan so'ng mijozlar oqimi oshmasa — bizga yozing, vaziyatni birgalikda batafsil ko'rib chiqamiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 2,
+      "question_ru": "ПВЗ НЕ ОТОБРАЖАЕТСЯ?",
+      "question_uz": "Nmaga BTP kartada korinmayapti?",
+      "answer_ru": "Уважаемый партнёр!\n\nПонимаем, насколько важно, чтобы клиенты могли легко вас найти.\n\nПришлите, пожалуйста, точный адрес вашего пункта выдачи — как только получим, сразу передадим запрос ответственному отделу на проверку.\n\nЕсли окажется, что ПВЗ действительно отсутствует на карте или отображается неверно, специалисты оперативно всё исправят.\n\nВопрос без внимания не оставим — обязательно вернёмся к вам с результатом.",
+      "answer_uz": "Hurmatli hamkor!\n\nМijozlar sizni oson topishi qanchalik muhimligini tushunamiz.Hoziroq hal qilamiz.\n\nIltimos, punktning aniq manzilini yuboring — olishimiz bilan so'rovni darhol mas'ul bo'limga tekshiruvga uzatamiz.\n\nAgar BTP haqiqatan xaritada yo'q yoki noto'g'ri ko'rsatilayotgani aniqlansa, mutaxassislar tezda hammasini to'g'rilaydi.\n\nBu masalani e'tiborsiz qoldirmaymiz — natija bilan albatta sizga qaytamiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 3,
+      "question_ru": "Можно ли установить на ПВЗ банкомат?",
+      "question_uz": "Qanday qilib BTP ga bankomat qo’ysam bo’ladi?",
+      "answer_ru": "Здравствуйте!\n\nДа, установка банкомата возможна. Чтобы мы могли рассмотреть ваш ПВЗ,  заполните эту форму , https://docs.google.com/forms/d/e/1FAIpQLScqEU9sepMN9DuDB1X8x5-A8CHa0dJjis4_mKynFqWltgFEUw/viewform",
+      "answer_uz": "Hurmatli hamkor!\n\nBankomat o‘rnatish imkoniyati mavjud!  BTP’ingizni ko‘rib chiqishimiz uchun, iltimos, shaklni to’ldirin .https://docs.google.com/forms/d/e/1FAIpQLScqEU9sepMN9DuDB1X8x5-A8CHa0dJjis4_mKynFqWltgFEUw/viewform",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 4,
+      "question_ru": "Какую счет фактуру нужно выставить для оплаты по суб аренде?",
+      "question_uz": "Qanday hisob faktura joylashtirishim kerak sub-arenda to’lovi uchun?",
+      "answer_ru": "Уважаемый партнер!\n\nДля получения выплаты за субаренду просим ознакомиться с порядком оформления документов:\n\nЕсли договор субаренды заключен с Uzum Market как с ИП, выставлять счет-фактуру не требуется. Выплата будет произведена до 10 числа каждого месяца.\n\nЕсли договор заключен от имени МЧЖ, ОК или другой юридической формы, необходимо выставить счет-фактуру. При этом в ней обязательно укажите месяц, за который производится оплата, а номер и дата договора субаренды должны быть указаны корректно.\n\nПри оформлении счета-фактуры, пожалуйста, обратите внимание: если у вас несколько объектов, необходимо выставить отдельную счет-фактуру по каждому объекту\n\nЕсли возникнут сложности при оформлении — дайте нам знать, мы поможем разобраться. Благодарим за внимательность! Это поможет избежать задержек при обработке документов и перечислении оплаты.",
+      "answer_uz": "Hurmatli hamkor!\n\nSubijara bo'yicha kompensatsiya olish uchun hujjatlarni rasmiylashtirish tartibi bilan tanishib chiqishingizni so'raymiz:\n\nAgar subijara shartnomasi Uzum Market bilan YTT nomidan tuzilgan bo'lsa, hisob-faktura taqdim etish talab qilinmaydi. To'lov har oyning 10-sanasigacha amalga oshiriladi.\n\nAgar shartnoma MChJ, OK yoki boshqa yuridik shaxs nomidan tuzilgan bo'lsa, hisob-faktura taqdim etishingiz kerak. Bunda hisob-fakturada to'lov qaysi oy uchun amalga oshirilayotganini va subijara shartnomasining raqami hamda sanasini albatta to'g'ri ko'rsating.\n\nAgar sizda bir nechta obyekt mavjud bo'lsa, har bir obyekt uchun alohida hisob-faktura rasmiylashtirilishi lozim.\n\nAgar hujjatlarni rasmiylashtirishda qiyinchilik yuzaga kelsa — bizga xabar bering, tushuntirib beramiz. E'tiboringiz uchun rahmat! Bu hujjatlarni ko'rib chiqish va to'lovni amalga oshirish jarayonida kechikishlarning oldini olishga yordam beradi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 5,
+      "question_ru": "Как выставить счет фактуру за вознаграждение и когда отчет получу?",
+      "question_uz": "Qachon otchet  yuboriladi va qanday qilib hisob faktura joylashtirish kerak?",
+      "answer_ru": "Уважаемый партнёр!\n\nСчет-фактуру вы можете сформировать достаточно просто в Didox после получения отчета. Отчет вы получаете в начале каждого месяца. На основании суммы, указанной в отчете, необходимо выставить счет-фактуру в Didox.\n\nМакет счета-фактуры (нажмите «Макет»). Инструкция по выставлению счет-фактуры.Если возникнут вопросы по оформлению — обращайтесь, мы вместе разберём любой сложный момент.",
+      "answer_uz": "Hurmatli hamkor!\n\nHisob-fakturani hisobotni olganingizdan so'ng Didox tizimida rasmiylashtirishingiz mumkin. Hisobot har oyning boshida taqdim etiladi. Hisobotda ko'rsatilgan summa asosida Didox tizimida hisob-fakturani rasmiylashtirishingiz kerak.\n\nHisob-faktura maketi («Maket» tugmasini bosing). Hisob-fakturani rasmiylashtirish bo'yicha yo'riqnoma.\n\nRasmiylashtirish jarayonida savollar tug'ilsa — murojaat qiling, har qanday murakkab holatni birgalikda hal qilamiz.",
+      "internal_notes": [],
+      "active": false
+    },
+    {
+      "id": 6,
+      "question_ru": "Получу ли я бонус 6 100 000 сум?",
+      "question_uz": "Bonus 6 100 000 olamanmi?",
+      "answer_ru": "Уважаемый партнёр,\n\nобращаем внимание, что компенсация за быстрое открытие (6 100 000 сум) регулируется условиями действующей оферты.\n\nСогласно условиям: \n• компенсация выплачивается при условии открытия ПВЗ не позднее 25 (двадцати пяти) календарных дней с даты подписания Акцепта оферты. \n• выплата производится по итогам следующего месяца после запуска ПВЗ, при условии непрерывной работы ПВЗ в течение всего отчётного периода \n• компенсация носит разовый характер и не является вознаграждением Партнёра за оказанные услуги.",
+      "answer_uz": "Hurmatli hamkor!\n\nE’tiboringizni shunga qaratamizki, tezkor ochilish uchun kompensatsiya (jumladan, 6 100 000 so‘mgacha bo‘lgan summa) amaldagi Oferta va Qo‘shimcha kelishuv shartlari bilan tartibga solinadi .\n\nShartlarga muvofiq:\n\n• kompensatsiya Aksept (Oferta) tuzilgan sanadan boshlab 25 (yigirma besh) kalendar kun ichida BTP ochilgan taqdirda to‘lanadi;\n\n• to‘lov BTP ishga tushirilgan oy uchun emas, balki keyingi oyning yakunlari bo‘yicha, BTP hisobot davri davomida to‘liq faoliyat yuritgan taqdirda amalga oshiriladi;\n\n• kompensatsiya bir martalik kompensatsiya to‘lovi hisoblanadi va Hamkor tomonidan ko‘rsatilgan xizmatlar uchun mukofot hisoblanmaydi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 7,
+      "question_ru": "Как производится расчет в первый месяц?",
+      "question_uz": "Qanday qilib xisob kitob ishlari birinchi oyda olib boriladi?",
+      "answer_ru": "В первый месяц работы ПВЗ расчёт вознаграждения производится пропорционально количеству фактически отработанных календарных дней (то есть с первого дня формирование заказа).\n\nЭто означает, что:\n\nесли ПВЗ начал работу не с первого числа месяца, выплата будет начислена только за фактически отработанные дни. Например, если в месяце 30 дней, а ПВЗ открылся 16 числа, то оно отработает 14 дней (30 − 16 = 14 дней).\n\nУсловно возьмём 1 сегмент. За каждый отработанный день ПВЗ данного сегмента начисляется 580 000 сум (17 400 000 / 30 = 580 000).\n\nТаким образом, за 14 отработанных дней партнёр получит 8 120 000 сум (14 × 580 000 = 8 120 000).\n\nДанный порядок расчёта закреплён в условиях вознагражденияПриложение №2 Пункт 1.2. к договору\n\nЕсли после этого расчёта останутся вопросы — мы с радостью пройдёмся по нему ещё раз вместе с вами.",
+      "answer_uz": "Hurmatli hamkor!\n\nBirinchi oydagi mukofot hisob-kitobi siz uchun ayniqsa muhim ekanini tushunamiz — keling, buni batafsil ko'rib chiqamiz.\n\nBu quyidagini anglatadi:\n\n• Agar BTP oyning birinchi sanasidan emas, keyinroq ish boshlagan bo‘lsa, to‘lov faqat haqiqatda ishlangan kunlar uchun hisoblanadi. Masalan, oy 30 kundan iborat bo‘lsa va BTP 16-sanada ochilgan bo‘lsa, u 14 kun ishlagan hisoblanadi (30 − 16 = 14 kun).\n\nShartli ravishda 1-segment misolini olaylik. Ushbu segmentdagi BTP uchun har bir ishlangan kun uchun 580 000 so‘m hisoblanadi (17 400 000 / 30 = 580 000).\n\nBTP faoliyatining birinchi oyida mukofot haqiqatda ishlangan kalendar kunlar soniga mutanosib ravishda hisoblanadi (ya’ni, birinchi buyurtma qabul qilingan kundan boshlab).\n\nShunday qilib, 14 kun ishlaganligi uchun hamkor 8 120 000 so‘m oladi (14 × 580 000 = 8 120 000).\n\nMazkur hisob-kitob tartibi Shartnomaning 2-ilovasi, 1.2-bandi(Mukofot to‘lash shartlari) bilan belgilangan. Agar ushbu hisob-kitobdan so'ng savollar qolsa — biz uni siz bilan birgalikda yana bir bor ko'rib chiqamiz.",
+      "internal_notes": [
+        "Подсказка оператору:уточнить сегмент партнера и на примере его сегмента сделать расчет как показано на примере выше",
+        "Operatorga qizqacha  bildirish:  partner qaysi segmentdaligini aniqlab taxminiy xisob kitob qilib berish  tepada ko’rsatilgan shablon kabi"
+      ],
+      "active": true
+    },
+    {
+      "id": 8,
+      "question_ru": "Какие вознаграждения получает франшизер?",
+      "question_uz": "Qanaday mukofot puli franshizer oladi?",
+      "answer_ru": "Уважаемый партнёр!\n\nПервые 180 дней работы ПВЗ \nЗдесь вам гарантирована фиксированная выплата — гарантированное вознаграждение. Но если в этот период процентное вознаграждение окажется выше гарантированного, вы получите бóльшую сумму.\n\nГарантированное вознаграждение Компания выплачивает Партнёру фиксированную сумму ежемесячно в течение 6 (шести) месяцев с момента начала деятельности ПВЗ (даты первого созданного Заказа). Размер гарантированного вознаграждения определяется в зависимости от территориального сегмента ПВЗ:\n\nСегмент 1:  17 400 000 сум в месяц;\n\nСегмент 2:  11 600 000 сум в месяц;\n\nСегмент 3:  9 000 000 сум в месяц\n\nПосле 180 дней (6 месяцев) \nВознаграждение считается уже только в процентном формате — от стоимости каждого выданного товара.\n\nЕсть и дополнительные виды вознаграждения — например, за выдачу заказов с других платформ, интегрированных с компанией.\n\nВсе подробности, размеры и порядок расчёта — в Приложении №2 к Оферте.\n\nКак это выглядит на примере\n\nДопустим, ваш ПВЗ относится к 1 сегменту, ставка — 6%. Товар стоит 500 000 сум. \nСчитаем: 500 000 × 6% = 30 000 сум — это ваше вознаграждение за этот товар.\n\nНо у выплаты есть потолок — максимум 36 000 сум за один товар. Поэтому если товар дороже, скажем, 1 000 000 сум (6% от него — уже 60 000 сум), вы всё равно получите 36 000 сум. \n\n\n\nПодсказка для оператора: если партнер спросит почему я получил меньше суммы гарантированного вознаграждения.( возможно были нарушения )\n\nВиды штрафов: РАО (4.2.47) Партнер обязуется сформировать возврат заказов в течение 48 (сорока восьми) часов после их отмены и передать в доставку возврата водителю в течение 24 часов.В размере 7 баллов= 70 000 сум за каждый несформированный заказ.\n\n4.2.49 Партнер обязан обеспечивать сдачу наличных денежных средств в рамках графика инкассации. График инкассации расположен по адресу: В размере 10 баллов = 100 000 сумм за каждый выявленный случай\n\nhttps://docs.google.com/spreadsheets/d/1HGzfLJMbVHsMCJNaxeVlrZHdNEt2s2ybl0LS4x-m97Q/edit?gid=1810878052#gid=1810878052\n\n4.2.26  Соблюдать и не изменять в одностороннем порядке режим работы ПВЗ, указанный в п. 2.1.9. договора. ( каждый 10 бал= 100 000 сум), следовательно штраф за свое временное не открытие зависит от того сколько часов не функционировал пвз.\n\n20 балл - 200 000 сум( до 2ч), 90 балл- 900 000 сум(от 2-5ч), 150 балл- 1 500 000 сум(более 5ч).\n\nШтраф можно опровергать только через Gmail.",
+      "answer_uz": "Hurmatli hamkor!\n\nPVZ ishlagan dastlabki 180 kun\n\nBu davrda sizga kafolatlangan fiksirlangan to‘lov — kafolatlangan mukofot to‘lanadi. Ammo ushbu davrda foizli mukofot kafolatlangan mukofotdan yuqori bo‘lsa, sizga kattaroq summa to‘lanadi.\n\nKafolatlangan mukofot Kompaniya tomonidan PVZ faoliyati boshlangan paytdan (birinchi Buyurtma yaratilgan sanadan) boshlab 6 (olti) oy davomida har oy Hamkorga fiksirlangan summada to‘lanadi.\n\nKafolatlangan mukofot miqdori PVZning hududiy segmentiga qarab belgilanadi:\n\n1-segment: oyiga 17 400 000 so‘m;\n\n2-segment: oyiga 14 000 000 so‘m;\n\n3-segment: oyiga 11 400 000 so‘m.\n\n180 kundan (6 oydan) keyin\n\nMukofot faqat foizli shaklda — topshirilgan har bir tovarning qiymatidan kelib chiqqan holda hisoblanadi.\n\nQo‘shimcha mukofot turlari ham mavjud — masalan, Kompaniya bilan integratsiya qilingan boshqa platformalardan kelgan buyurtmalarni topshirganlik uchun.\n\nBarcha batafsil ma’lumotlar, mukofot miqdori va hisoblash tartibi Oferta 2-ilovasida ko‘rsatilgan.\n\nBu qanday hisoblanadi — misolda\n\nFaraz qilaylik, sizning PVZingiz 1-segmentga tegishli va stavka 6% ni tashkil etadi. Tovar qiymati — 500 000 so‘m.\n\nHisoblaymiz: \n500 000 × 6% = 30 000 so‘m — bu ushbu tovar uchun sizga to‘lanadigan mukofot.\n\nBiroq to‘lovning maksimal chegarasi mavjud — bir tovar uchun ko‘pi bilan 36 000 so‘m.\n\nShuning uchun, masalan, tovar qiymati 1 000 000 so‘m bo‘lsa (6% — 60 000 so‘m), siz baribir 36 000 so‘m mukofot olasiz.\n\nJarima turlari:\n\nRAO (4.2.47) — Hamkor buyurtmalar bekor qilinganidan keyin 48 (qirq sakkiz) soat ichida qaytarishni shakllantirishi va qaytariladigan buyurtmani 24 soat ichida qaytarish yetkazib beruvchisiga topshirishi shart.\n\nMiqdori: 7 ball = har bir shakllantirilmagan buyurtma uchun 70 000 so‘m.\n\n4.2.49 — Hamkor inkassatsiya jadvaliga muvofiq naqd pul mablag‘larini topshirishni ta’minlashi shart.\n\nInkassatsiya jadvali quyidagi manzilda joylashgan:\n\nMiqdori: 10 ball = har bir aniqlangan holat uchun 100 000 so‘m.\n\n4.2.26 — 2.1.9-bandda ko‘rsatilgan PVZ ish rejimini saqlash va uni bir tomonlama tarzda o‘zgartirmaslik.\n\nHar 10 ball = 100 000 so‘m.\n\nShunga ko‘ra, PVZning o‘z vaqtida ochilmaganligi uchun jarima miqdori PVZ qancha soat ishlamaganiga bog‘liq:\n\n20 ball — 200 000 so‘m (2 soatgacha);\n\n90 ball — 900 000 so‘m (2–5 soat);\n\n150 ball — 1 500 000 so‘m (5 soatdan ortiq).\n\nJarimaga e’tiroz bildirish faqat Gmail orqali amalga oshirilishi mumkin.",
+      "internal_notes": [
+        "Operator uchun eslatma: agar hamkor «Nima uchun men kafolatlangan mukofot summasidan kamroq summa oldim?» deb so‘rasa, ehtimol, qoidabuzarliklar bo‘lgan bo‘lishi mumkin."
+      ],
+      "active": true
+    },
+    {
+      "id": 9,
+      "question_ru": "Как можно осуществить возврат товара?",
+      "question_uz": "Qanday qilib tovarni vozvrat qilsa bo’ladi?",
+      "answer_ru": "Уважаемый партнёр,\n\nЕсли клиент после получения заказа решил оформить возврат товара, он может сделать это в любом ПВЗ, кроме Иншопа, при условии, что срок возврата товара не истёк по ссылке.Bозврат товаров , минусуется вознограждение с того пвз откуда клиент забирал заказ.",
+      "answer_uz": "Hurmatli hamkor!\n\nSavolingiz uchun rahmat — qaytarish jarayoni siz va mijozlaringiz uchun muhim ekanini tushunamiz\n\nAgar mijoz buyurtmani olgandan so‘ng tovarni qaytarishga qaror qilsa, tovarni qaytarish muddati o‘tmagan bo‘lsa, u Inshopdan tashqari istalgan BTP da qaytarishni rasmiylashtirishi mumkin.\n\nTovar qaytarilganda, mukofot buyurtma dastlab mijozga topshirilgan PVZ hisobidan ayriladi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 10,
+      "question_ru": "ПЕРЕОФОРМЛЕНИЕ ПВЗ",
+      "question_uz": "PVZni qayta rasmiylashtirish",
+      "answer_ru": "Переоформление ПВЗ возможно вступает в силу  только с начала месяца. Для начала процедуры необходимо предоставить данные нового партнёра. После внутреннего согласования мы приступаем к подготовке документов. (с первого числа следующего месяца)\n\nЕсли новый партнёр ранее не сотрудничал с Uzum Market, оформляются: Акцепт; договор субаренды; бланк-заявка; E-Ijara. Со стороны действующего партнёра оформляются расторжение необходимых документов и, при необходимости, расторжение Акцепта, если он полностью прекращает сотрудничество с компанией.  (не является действующим партнером)\n\nЕсли права  на ПВЗ переходят между действующими партнерами   , оформляется трёхстороннее соглашение о передаче прав, а также новые документы по субаренде и бланк-заявки. Со стороны предыдущего партнёра расторгаются договор субаренды и E-Ijara.\n\nПеречень необходимых документов для нового партнёра: Гувохнома, паспорт, документ с банковскими реквизитами, скриншот кадастра с Davreest, договор аренды,  E-Ijara. арендодателя, кадастровые документы.\n\nЕсли у вас появятся вопросы на любом из этапов — мы всегда рядом и поможем пройти процесс без задержек.",
+      "answer_uz": "BTPni qayta rasmiylashtirish faqat oy boshidan amalga kiradi. Jarayonni boshlash uchun yangi hamkorning ma’lumotlarini taqdim etish zarur. Ichki kelishuvdan so‘ng hujjatlarni tayyorlashni boshlaymiz. (Keyingi oyning birinchi sanasidan kuchga kiradi.)\n\nAgar yangi hamkor avval Uzum Market bilan hamkorlik qilmagan bo‘lsa, quyidagi hujjatlar rasmiylashtiriladi: Aksept; subijara shartnomasi; ariza-blank; E-Ijara. Amaldagi hamkor tomonidan zarur hujjatlarni bekor qilish va, agar u kompaniya bilan hamkorlikni to‘liq to‘xtatsa, Akseptni ham bekor qilish rasmiylashtiriladi. (Yangi hamkor amaldagi hamkor hisoblanmaydi.)\n\nAgar BTPga bo‘lgan huquqlar amaldagi hamkorlar o‘rtasida o‘tkazilsa, huquqlarni o‘tkazish bo‘yicha uch tomonlama kelishuv, shuningdek subijara bo‘yicha yangi hujjatlar va ariza-blank rasmiylashtiriladi. Avvalgi hamkor tomonidan subijara shartnomasi va E-Ijara bekor qilinadi.\n\nYangi hamkor uchun zarur hujjatlar ro‘yxati: Guvohnoma, pasport, bank rekvizitlari ko‘rsatilgan hujjat, Davreestdan kadastr skrinshoti, ijara shartnomasi, ijaraga beruvchining E-Ijara hujjati, kadastr hujjatlari.\n\nAgar jarayonning istalgan bosqichida savollaringiz paydo bo‘lsa, biz doimo yordam berishga tayyormiz va jarayonni kechikishlarsiz o‘tishingizga ko‘maklashamiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 11,
+      "question_ru": "НАЙМ СОТРУДНИКОВ",
+      "question_uz": "Xodimlarni ishga qabul qilish",
+      "answer_ru": "Уважаемый партнёр,\n\nНа текущий момент Uzum Market не осуществляет найм сотрудников для партнёрских ПВЗ. Подбор персонала осуществляется партнёром самостоятельно.\n\nПосле того как кандидат будет найден, партнёр обязан предоставить все необходимые данные\n\n( паспорт, фотка 3х4, справка 086, прописка)  и документы территориальному управляющему для согласования.\n\nПосле проверки территориальный управляющий направляет кандидата на обучение. Если кандидат успешно проходит обучение, он может приступить к работе в ПВЗ.\n\nЕсли возникнут сложности с согласованием кандидата — обратитесь к территориальному управляющему, он поможет на каждом этапе. (по вопросам согласование кандидата можно всегда обратиться к своему ТУ)",
+      "answer_uz": "Hurmatli hamkor!\n\nHozirgi vaqtda Uzum Market hamkorlikdagi PVZlar uchun xodimlarni ishga qabul qilmaydi. Xodimlarni tanlash hamkor tomonidan mustaqil ravishda amalga oshiriladi.\n\nNomzod topilgandan so‘ng, hamkor barcha zarur ma’lumotlar (pasport, 3×4 fotosurat, 086-ma’lumotnoma, propiska) va hujjatlarni kelishish uchun hududiy boshqaruvchiga taqdim etishi shart.\n\nTekshiruvdan so‘ng hududiy boshqaruvchi nomzodni o‘qishga yo‘naltiradi. Agar nomzod o‘qishni muvaffaqiyatli tamomlasa, u PVZda ish boshlashi mumkin.\n\nAgar nomzodni kelishishda qiyinchiliklar yuzaga kelsa, hududiy boshqaruvchiga murojaat qiling. U har bir bosqichda yordam beradi. Nomzodni kelishish bo‘yicha savollar yuzasidan har doim o‘z hududiy boshqaruvchingizga murojaat qilishingiz mumkin.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 12,
+      "question_ru": "ОФОРМЛЕНИЕ БАНКОВСКОЙ КАРТЫ",
+      "question_uz": "Bank kartani rasmiylashtirish",
+      "answer_ru": "Уважаемый партнёр,\n\nСотрудники франшизного ПВЗ могут получать бонус за оформление карт Uzum через QR-код партнёра.\n\nДля этого необходимо: \n• зарегистрироваться через ссылку: https://t.me/UzumBankRbot?start=PartnerPVZ \n• получить персональный QR-код \n• передать QR-код сотруднику, который будет оформлять карт.\n\nБонус начисляется Uzum Bank за оформление карт через QR-код Партнёра.\n\nЕсли возникнут сложности с регистрацией или получением QR-кода — напишите нам, поможем разобраться.",
+      "answer_uz": "Hurmatli hamkor,\n\nFranshiza BTP xodimlari Hamkorning QR-kodi orqali Uzum kartalarini rasmiylashtirish uchun bonus olishlari mumkin.\n\nquyidagi havola orqali ro‘yxatdan o‘tish kerak: https://t.me/UzumBankRbot?start=PartnerPVZ\n\nBuning uchun:\n\nyangi kartalarni rasmiylashtiradigan xodimga ushbu QR-kodni berish kerak.\n\nshaxsiy QR-kodni olish kerak;\n\nBonus Uzum Bank tomonidan Hamkorning QR-kodi orqali rasmiylashtirilgan yangi kartalar uchun hisoblanadi.\n\nRo'yxatdan o'tish yoki QR-kod olishda qiyinchilik bo'lsa — bizga yozing, yordam beramiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 13,
+      "question_ru": "БРЕНДИРОВАННЫЕ ПАКЕТЫ",
+      "question_uz": "Brendlangan paketlar",
+      "answer_ru": "Уважаемый партнёр!\n\nНа ваш ПВЗ регулярно отправляются брендированные пакеты.  Можно заказать пакеты, оставив заявку в Jira. Как это сделать — подробно показано в инструкции. Размер  пакетов:\n\nS- 25 × 35 см, М-35 × 45 см, L- 45 × 60 см, XL-60 × 80 см.\n\nЕсли с созданием заявки в Jira что-то не заладится — обратитесь к своему территориальному управляющему, он поможет всё оформить правильно.",
+      "answer_uz": "Hurmatli hamkor!\n\nPVZga brendlangan paketlar yetkazib beriladi.\n\nZarurat tug‘ilganda, Jira orqali ariza qoldirib qo‘shimcha paketlarga buyurtma berishingiz mumkin.\n\nJira'da ariza yaratishda qiyinchilik bo'lsa — hududiy boshqaruvchingizga murojaat qiling, u to'g'ri rasmiylashtirishga yordam beradi. Jira'da ariza yaratish bo‘yicha yo‘riqnoma.Paketlar o‘lchamlari:\n\nS — 25 × 35 sm\n\nM — 35 × 45 sm\n\nL — 45 × 60 sm\n\nXL — 60 × 80 sm",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 14,
+      "question_ru": "Как я могу закрыть ПВЗ? Я хочу продать ПВЗ, какие документы нужны?",
+      "question_uz": "Qanday qilib BTP ni yopsam bo’ladi?Qanday xujjatlar kerak,BTP ni sotmoqchiman?",
+      "answer_ru": "1. Сначала — выясняем причину\n\nПрежде чем говорить о самой процедуре, важно понять, что стоит за решением.\n\nУважаемый партнёр, нам искренне жаль это слышать. Расскажите, пожалуйста, что подтолкнуло вас к такому решению? Нам правда важно разобраться — возможно, мы сможем что-то предложить.\n\nУточните, с чем связаны сложности: низкий оборот, мало клиентов, высокая аренда, вопросы с персоналом — или что-то другое?\n\nЕсли дело в работе самого ПВЗ — давайте вместе поищем решение. Например, рассмотрим переезд в другую локацию.\n\n📝 Подсказка оператору: Проверить, реально ли низкий оборот. Уточнить, сколько партнёр тратит на расходы.\n\n2. Если партнёр всё же решил не продолжать — сначала предлагаем продажу, а не закрытие\n\nЕсли вы больше не хотите заниматься ПВЗ, закрывать его необязательно — точку можно продать другому партнёру. Вы можете самостоятельно найти покупателя.\n\nЕсли же решение окончательное и вы хотите именно закрыть точку, нужно заранее прислать нам уведомление о расторжении договора — не менее чем за 30 календарных дней до даты расторжения.\n\nЗдесь есть важный нюанс: согласно пункту 10.3.5 Оферты, если договор расторгается по вашей инициативе в течение первого года работы, потребуется вернуть гарантированное вознаграждение, выплаченное компанией за первые шесть месяцев. Понимаем, что этот момент непростой — мы готовы подробно разобрать его вместе с вами и ответить на любые вопросы.",
+      "answer_uz": "1. Avvalo, hamkorga BTPni yopish tartibini tushuntirishdan oldin uning bunday qarorga kelish sababini aniqlash kerak.\n\nBTPni yopishni ko'rib chiqayotganingizni eshitib, afsuslanamiz. Iltimos, ayting, bunday qarorga kelishingizga nima sabab bo'ldi? Biz vaziyatni chinakam tushunishni istaymiz, shunda sizga mos yechim taklif qila olamiz.\n\nIltimos, qanday qiyinchiliklarga duch kelganingizni ayting. Bu past aylanma mablag', mijozlar oqimining kamligi, ijara narxining yuqoriligi, xodimlar bilan bog'liq masalalar yoki boshqa sabab bilan bog'liqmi?\n\nAgar sabab BTP faoliyati bilan bog'liq bo'lsa, keling, birgalikda yechim topishga harakat qilamiz. Ehtimol, BTPni boshqa joyga ko'chirish imkoniyatini ko'rib chiqishimiz yoki uning xaritada to'g'ri aks etayotganini tekshirishimiz mumkin.\n\n📝 Operatorga kichkina ko’trsatma :Tekshirib ko’rish kerak aylanma xolatini. Partnerdan oyiga qancha xarajat qilishi to’g’risida malumot olin.\n\n2. Agar hamkor baribir faoliyatni davom ettirishga tayyor bo'lmasa.\n\nAgar siz endi BTP faoliyatini davom ettirishni rejalashtirmayotgan bo'lsangiz, uni yopish shart emas — boshqa hamkorga sotishingiz mumkin. Agar sizni ushbu variant qiziqtirsa, potensial xaridorni mustaqil ravishda topishingiz mumkin, biz esa keyingi qayta rasmiylashtirish jarayonida sizga yordam beramiz.\n\nAgar siz BTPni yopish bo'yicha yakuniy qarorga kelgan bo'lsangiz, shartnomani bekor qilish to'g'risidagi bildirishnomani oldindan bizning manzilimizga yuborishingiz kerak — bekor qilish rejalashtirilgan sanadan kamida 30 kalendar kun oldin. E'tiboringizni qaratamiz: Oferta shartnomasining 10.3.5-bandiga muvofiq, agar hamkor faoliyatining birinchi yili davomida shartnomani o'z tashabbusi bilan bekor qilishga qaror qilsa, kompaniya tomonidan dastlabki olti oy uchun to'langan kafolatlangan mukofotni qaytarishi lozim. Bu muhim va oson bo'lmagan jihat ekanini tushunamiz — savollaringiz bo'lsa, uni siz bilan batafsil ko'rib chiqishga tayyormiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 15,
+      "question_ru": "Как зарегистрироваться в личном кабинете?",
+      "question_uz": "Qanday registratsiya qilsam bo’ladi Shaxsiy Kabinetga ?",
+      "answer_ru": "Уважаемый партнёр!\n\nВ личном кабинете вы можете увидеть: оборот ПВЗ, количество выданных заказов, количество возвратов, вознаграждение по каждому заказу.\n\nКак открыть личный кабинет: запустите Telegram-бот \\@UzumFranchiseBot; нажмите кнопку «Личный кабинет» ; приложение откроется автоматически, а ваши ПВЗ уже будут привязаны к аккаунту. ( если не видите ПВЗ в ЛК дайте нам знать)\n\nТакже обращаем внимание, что в ближайшее время все взаиморасчёты будут осуществляться через личный кабинет. Поэтому просим заранее получить доступ и авторизоваться — если при подключении возникнут сложности, мы с радостью поможем.",
+      "answer_uz": "Hurmatli hamkor!\n\nShaxsiy kabinetingizda quyidagi ma'lumotlarni ko'rishingiz mumkin: PVZ aylanmasi, topshirilgan buyurtmalar soni, qaytarilgan buyurtmalar soni, har bir buyurtma bo'yicha hisoblangan mukofot.\n\nShaxsiy kabinetni qanday ochish mumkin: Telegram'dagi \\@UzumFranchiseBot botini ishga tushiring; 📎 tugmasi yonidagi \"Shaxsiy kabinet\" tugmasini bosing; mini-ilova avtomatik ravishda ochiladi va sizning PVZlaringiz akkauntingizga avtomatik bog'langan bo'ladi.\n\nShuningdek, yaqin vaqt ichida barcha o'zaro hisob-kitoblar shaxsiy kabinet orqali amalga oshirilishiga e'tiboringizni qaratamiz. Shu sababli, iltimos, oldindan shaxsiy kabinetga kirish huquqini oling va avtorizatsiyadan o'ting — ulanishda qiyinchilik bo'lsa, biz albatta yordam beramiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 16,
+      "question_ru": "Хочу открыть новую точку, куда оставить заявку на согласование геолокации?",
+      "question_uz": "Yangi BTP  ochmoqchiman, geolokatsiyani tasdiqlash uchun arizani qayerga qoldirishim kerak?",
+      "answer_ru": "Вы можете оставить заявку по ссылке",
+      "answer_uz": "Siz havola orqali ariza qoldirishingiz mumkin.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 17,
+      "question_ru": "Почему рядом со мной очень близко еще открылось ПВЗ ?На сколько  близко можно открывать?",
+      "question_uz": "Nega mening yonimda juda yaqin masofada yana bir BTP ochildi? Qancha masofada BTP  ochishga ruxsat beriladi?",
+      "answer_ru": "Открытие нового ПВЗ согласовывается индивидуально с учётом конкретной локации, клиентского потока и наличия действующих ПВЗ поблизости. Поэтому само расстояние между точками не является единственным критерием.Отправьте, пожалуйста, номер вашего ПВЗ и геолокацию. Мы передадим информацию ответственному отделу, чтобы они проверили ситуацию.",
+      "answer_uz": "Yangi PVZ ochilishi aniq lokatsiya, mijozlar oqimi va yaqin atrofda mavjud PVZlar borligini hisobga olgan holda individual tarzda kelishiladi. Shu sababli, PVZlar orasidagi masofa yagona mezon hisoblanmaydi.\n\nIltimos, PVZ raqamingiz va geolokatsiyangizni yuboring. Ma’lumotlarni mas’ul bo‘limga yuboramiz va ular vaziyatni tekshirib chiqishadi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 18,
+      "question_ru": "Хочу поменять график работы ПВЗ, как могу сделать?",
+      "question_uz": "Ish vaqtini o‘zgartirmoqchiman, buni qanday amalga oshirishim mumkin?",
+      "answer_ru": "Предоставьте, пожалуйста, информацию о вашем ПВЗ, и мы передадим её в соответствующий отдел для рассмотрения вашего предложения.Подсказка оператору: Мы полученные информацию передаем ТУ",
+      "answer_uz": "Iltimos, PVZingiz haqida ma’lumot taqdim eting. Biz ushbu ma’lumotni taklifingizni ko‘rib chiqish uchun tegishli bo‘limga yuboramiz.",
+      "internal_notes": [
+        "Operator uchun eslatma: Olingan ma’lumotlarni hududiy boshqaruvchiga (TU) yuboramiz."
+      ],
+      "active": true
+    },
+    {
+      "id": 19,
+      "question_ru": "Как я могу получить паспорт на наружную рекламу",
+      "question_uz": "Qanday qilib tashqi reklamaga passport olsam bo/ladi?",
+      "answer_ru": "Пасспорта наружной рекламы можно получить по ссылке (инструкция), франшизер сам самостоятельно должен получить одобрение за вывеску наружной рекламы",
+      "answer_uz": "Tashqi reklama pasportini ushbu havola orqali olishingiz mumkin (yo‘riqnoma). Franshiza hamkori tashqi reklama peshlavhasi uchun tasdiqni mustaqil ravishda olishi kerak.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 20,
+      "question_ru": "Я хочу раздать промокод для своих клиентов, Узум маркет может ли предоставить такой промокод?",
+      "question_uz": "Men o‘z mijozlarimga promokod tarqatmoqchiman. Uzum Market bunday promokod taqdim eta oladimi?",
+      "answer_ru": "Спасибо, за предложение мы обязательно все рассмотрим. Но данный момент такие промокоды не дает Узум маркет.",
+      "answer_uz": "Taklifingiz uchun rahmat. Biz albatta uni ko‘rib chiqamiz. Ammo hozirgi vaqtda Uzum Market tomonidan bunday promokodlar taqdim etilmaydi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 21,
+      "question_ru": "У меня пломбиратор,жгут, мешки для инкассации закончились что делать ?",
+      "question_uz": "Menda plombirator, jgut va inkassatsiya uchun qoplar tugab qoldi. Nima qilishim kerak?",
+      "answer_ru": "Вам необходимо уведомить своего ТУ(территориальный управляющий) , а после ваш ТУ  по JIRA даст заявку на недостающие материалы.Мешки для инкассации предоставляются сотрудниками инкассации.",
+      "answer_uz": "Siz o‘zingizning TU (hududiy boshqaruvchingiz)ga xabar berishingiz kerak. Shundan so‘ng, TU JIRA orqali yetishmayotgan materiallar uchun ariza qoldiradi. Inkassatsiya uchun qoplar inkassatsiya xodimlari tomonidan beriladi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 22,
+      "question_ru": "Когда мы все перейдем на потоварку и все пвз перейдут ли на потоварку ?",
+      "question_uz": "Qachon meni BTP potovarkaga o’tadi va barcha BTP lar o’tadimi potovarkaga?",
+      "answer_ru": "Уважаемый партнер, все франшизные ПВЗ функционируют в режиме потаварка, классические также .",
+      "answer_uz": "Hurmatli hamkor, barcha franshizaviy PVZlar potavarka rejimida faoliyat yuritadi, klassik PVZlar ham shu rejimda ishlaydi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 23,
+      "question_ru": "Можно ли  на карте отключить Узпостов, которые расположены рядом с моим ПВЗ?",
+      "question_uz": "Xaritada mening PVZim yaqinida joylashgan Uzpostlarni o‘chirib qo‘yish mumkinmi?",
+      "answer_ru": "Уважаемый партнер, просим вас  направить нам:\n\nЛокацию Вашего ПВЗ и УЗпоста;\n\nДальше мы передадим информацию специалистам и скоро вернемся с ОС",
+      "answer_uz": "Hurmatli hamkor, sizdan quyidagi ma’lumotlarni bizga yuborishingizni so‘raymiz:\n\nPVZ va Uzpost joylashuvini (lokatsiyasini).\n\nShundan so‘ng, ma’lumotlarni tegishli mutaxassislarga yuboramiz va tez orada sizga qayta aloqa beramiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 24,
+      "question_ru": "Можно ли подключить услуги ФБС(Drop Off) франшизам?",
+      "question_uz": "FBS (Drop Off) xizmatlarini franshizalarga ulash mumkinmi?",
+      "answer_ru": "Спасибо большое за предложение, данный момент услуги ФБС находиться на стадии разработки. Просим вас следить нас на официальном канале где мы регулярно делимся новостями об изменениях.",
+      "answer_uz": "Rahmat, taklifingiz uchun katta rahmat. Hozirgi vaqtda FBS xizmatlari ko’rib chiqilmoqda . Yangiliklar va o‘zgarishlar haqida muntazam ma’lumot berib boradigan rasmiy kanalimizni kuzatib borishingizni so‘raymiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 25,
+      "question_ru": "Где могу получить TABLE TENT ?",
+      "question_uz": "",
+      "answer_ru": "Тейбл тент предоставляется единоразового со стороны Узум Маркет. Для этого вам необходимо обратиться к своему ТУ(территориальному управляещему ).\n\nПодсказка опреатору как выглядит тейбл тент",
+      "answer_uz": "Teybl-tent Uzum Market tomonidan bir martalik taqdim etiladi. Buning uchun o‘zingizning TU (hududiy boshqaruvchingiz)ga murojaat qilishingiz kerak.",
+      "internal_notes": [
+        "Operatorga eslatma: teybl-tent qanday ko‘rinishda bo‘ladi."
+      ],
+      "active": true
+    },
+    {
+      "id": 26,
+      "question_ru": "Нужна табличка о пререрыве на ПВЗ",
+      "question_uz": "BTPda tanaffus haqida lavha kerak.",
+      "answer_ru": "Такая табличка о перерыве ПВЗ предоставляется со стороны Узум Маркет, чтоб ее получить вам необходимо уведомить ТУ ( территориальный управляющий).",
+      "answer_uz": "Bunday tanaffus haqidagi lavha Uzum Market tomonidan taqdim etiladi. Uni olish uchun TU (hududiy boshqaruvchi)ni xabardor qilishingiz kerak.",
+      "internal_notes": [
+        "Подсказка оператору:  Как выглядит это табличка",
+        "Operatorga eslatma: Ushbu lavha qanday ko‘rinishda bo‘ladi."
+      ],
+      "active": true
+    },
+    {
+      "id": 27,
+      "question_ru": "Проблемы с работы WMS (возвращенные  товары не отображаются,  по qr код не читает система и тд)",
+      "question_uz": "WMS tizimi bilan bog‘liq muammolar (qaytarilgan tovarlar aks etmayapti, QR-kod tizim tomonidan o‘qilmayapti va h.k.)",
+      "answer_ru": "Проблемы с системой WMS могут наблюдаться из-за технических проблем, просим вас обратиться к своему ТУ(территориальный управляющий), вам направит ссылку на WMS support.",
+      "answer_uz": "WMS tizimida texnik muammolar sababli nosozliklar kuzatilishi mumkin. Sizdan o‘z TU (hududiy boshqaruvchi)ingizga murojaat qilishingizni so‘raymiz. U sizga WMS Support xizmatiga murojaat qilish uchun havolani yuboradi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 28,
+      "question_ru": "Терминал мне предоставили, но не добавили в группу Постоплата.Кому нужно обратиться?",
+      "question_uz": "Menga terminal taqdim etildi, lekin meni “Postoplata” guruhiga qo‘shishmadi. Kimga murojaat qilishim kerak?",
+      "answer_ru": "К сожалению в группу Постоплата мы не можем добавлять админов(партнеров), просим вас обратиться к Ту (территориальному управляещему).",
+      "answer_uz": "Afsuski, “Postoplata” guruhiga adminlar (hamkorlar) qo‘shilmaydi. Sizdan TU (hududiy boshqaruvchi)ingizga murojaat qilishingizni so‘raymiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 29,
+      "question_ru": "Какие ТМЦ могу заказать (давать заявку) через JIRA",
+      "question_uz": "JIRA orqali qanday TMBlarni buyurtma qilish (ariza berish) mumkin?",
+      "answer_ru": "Вы можете оставить за заявку по JIRA на пакеты(черная майка), набор инкассации на 30дней, форма для сотрудников. Просим вас уведомить своего ТУ( территориального управляющего) после того как оставите заявку.",
+      "answer_uz": "Siz JIRA orqali paketlar (qora mayka), 30 kunlik inkassatsiya to‘plami va xodimlar uchun forma bo‘yicha ariza qoldirishingiz mumkin. Ariza qoldirganingizdan so‘ng, o‘z TU (hududiy boshqaruvchi)ingizni xabardor qilishingizni so‘raymiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 30,
+      "question_ru": "Логисты сломали мне (дверь , ключ от двери, ручку и тп) кому нужно обратиться? Кто будет мне теперь платить за такой ущерб ПВЗ ?",
+      "question_uz": "Logistlar mening (eshigimni, eshik kalitini, dastasini va h.k.) buzib qo‘yishdi. Kimga murojaat qilishim kerak? Endi PVZga yetkazilgan bunday zararni kim qoplaydi?",
+      "answer_ru": "Просим вас принять наши извинения за предоставленные неудобства , предоставьте пожалуйста фото или видео инцидента мы перенаправим всю информацию специалистам.",
+      "answer_uz": "Noqulayliklar uchun uzr so‘raymiz. Iltimos, yuz bergan holat bo‘yicha foto yoki video taqdim eting. Biz barcha ma’lumotlarni tegishli mutaxassislarga yo‘naltiramiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 31,
+      "question_ru": "Можете ли вы проверить грузоместо, груз нам не пришел?",
+      "question_uz": "",
+      "answer_ru": "Уважаемый партнер, вам необходимо обратиться к ТУ по этому поводу. А так же вы можете пройтись по ссылке @Uzum_support_warehouse",
+      "answer_uz": "Hurmatli hamkor, bu masala bo‘yicha TUga murojaat qilishingiz kerak. Shuningdek, quyidagi havola orqali o‘tishingiz mumkin: @Uzum_support_warehouse",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 32,
+      "question_ru": "Во время инвентаризации при проверке один товар не был отсканирован. Мы провели поиск и отправили его на склад, но клиент пришёл — в WMS товар числится, однако фактически его нет, так как мы отправили его на склад. Подскажите, пожалуйста, что теперь нужно делать?",
+      "question_uz": "",
+      "answer_ru": "Здравствуйте!\n\nПожалуйста, отправьте номер заказа. Также просим вас прислать фотографию коробки, который вы отправили на склад.\n\nМы проверим информацию и уточним ситуацию.",
+      "answer_uz": "Assalomu alaykum!\n\nIltimos, buyurtma raqamini yuboring. Shuningdek, omborga yuborgan korobkangizning fotosuratini ham yuborishingizni so‘raymiz.\n\nBiz ma’lumotlarni tekshirib, vaziyatga aniqlik kiritamiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 33,
+      "question_ru": "У меня в личном кабинете  ПВЗ не отображается кому обратиться?",
+      "question_uz": "",
+      "answer_ru": "Уважаемый партнер просим вас дать нам  шортнейм вашего ПВЗ, Контакты, актуальную электронную почту.",
+      "answer_uz": "Hurmatli hamkor, iltimos, PVZingizning shortneymi, aloqa ma’lumotlari va amaldagi elektron pochta manzilingizni yuborishingizni so‘raymiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 34,
+      "question_ru": "Как я  могу узнать плачу ли я НДС или нет ,и сколько процентов ?",
+      "question_uz": "",
+      "answer_ru": "Уважаемый партнер вам необходимо  пройтись по ссылке и проверить свои данные  https://my.soliq.uz/remotes-services/business-without-risk/vat-payers",
+      "answer_uz": "Hurmatli hamkor, iltimos, quyidagi havola orqali o‘tib, ma’lumotlaringizni tekshirib ko‘ring:\n\nhttps://my.soliq.uz/remotes-services/business-without-risk/vat-payers",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 35,
+      "question_ru": "Могу ли я теперь выдавать карту в своем пвз?",
+      "question_uz": "",
+      "answer_ru": "Уважаемый партнер,  конечно выдача карты необходимо для пвз. если хотите подключить свой ПВЗ к выдаче пластиковых карт Uzum Bank, необходимо выполнить несколько шагов. \n\n😀 Что нужно сделать: \n😀 Вступить в специальный Telegram-канал для обучения сотрудников. \n😀 Ссылка на канал \n\n😃 Поделиться ссылкой на канал с сотрудниками вашего ПВЗ, которые будут выдавать карты, чтобы они могли пройти обучение и тестирование. \n\n😄 Пройти обучение и тестирование сотрудникам вашего ПВЗ. \n\n🍇 Для успешного прохождения теста нужно правильно ответить минимум на 10 из 12 вопросов. \n\n😀 Что будет дальше: \n😀 после успешного прохождения обучения и тестирования на адрес ПВЗ будет отправлен настроенный планшет; \n😀 после получения планшета пункт подключат к выдаче пластиковых карт Uzum Bank. \n\n‼️Важно: обучение и тестирование должны пройти именно сотрудники, которые будут выдавать карты.",
+      "answer_uz": "Hurmatli hamkor, albatta, karta berilishi PVZ uchun zarur. agar BTP'ingizni Uzum Bank plastik kartalarini berishga ulamoqchi bo‘lsangiz, bir necha bosqichni bajarishingiz kerak. \n\n😀 Nima qilish kerak: \n😀 Xodimlarni o‘qitish uchun maxsus Telegram-kanalga qo‘shiling. \n😀 Kanalga havola \n😃 Kanal havolasini Uzum kartalarini beradigan BTP xodimlaringiz bilan ulashing, shunda ular o‘quv va testdan o‘tishlari mumkin. \n\n😄 BTP xodimlari o‘quv va testdan o‘tishlari kerak. \n\n🍇 Testdan muvaffaqiyatli o‘tish uchun 12 ta savoldan kamida 10 tasiga to‘g‘ri javob berish kerak. \n\n😀 Keyin nima bo‘ladi: \n😀 o‘quv va test muvaffaqiyatli yakunlangach, BTP manziliga sozlangan planshet yuboriladi; \n😀 planshet olingach, punkt Uzum Bank plastik kartalarini berishga ulanadi. \n\n‼️Muhim: o‘quv va testdan aynan kartalarni beradigan xodimlar o‘tishi kerak.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 36,
+      "question_ru": "Как теперь будут проводиться выплаты?",
+      "question_uz": "",
+      "answer_ru": "Уважаемый партнер просим вас ознакомиться с презентацией, а также видео инструкция",
+      "answer_uz": "Hurmatli hamkor, sizdan taqdimot bilan tanishib chiqishingizni so‘raymiz. Video instruksiya.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 37,
+      "question_ru": "Как мне самостоятельно поменять свои банковские реквизиты в личном кабинете?",
+      "question_uz": "Qanday qilib bank rekvizitimni o’zgartirsam bo’ladi shaxsiy kabinetimda?",
+      "answer_ru": "Уважаемый партнер , в личном кабинете пройдите в раздел профиль и там выйдет отдел Реквизиты.",
+      "answer_uz": "Hurmatli hamkor, shaxsiy kabinetingizda «Profil» bo‘limiga o‘ting, u yerda «Rekvizitlar» bo‘limi ko‘rinadi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 38,
+      "question_ru": "У меня принтер не работал, из-за этого не смог сдать инкассацию, что теперь будет?",
+      "question_uz": "Menda printer ishlamaganligi sababli inkassatsiyani topshira olmadim, endi nima bo‘ladi?",
+      "answer_ru": "Вы в качестве причины нарушения указали, что на ПВЗ не работал принтер, данная причина не является основанием для отмены штрафа. \nСогласно условиям Договора, партнёр обязан обеспечивать бесперебойную работу необходимой техники на ПВЗ, а в случае неисправности — своевременно организовать её ремонт или замену. \nПоэтому в данном случае нарушение считается обоснованным.",
+      "answer_uz": "Siz qoidabuzarlik sababi sifatida PVZda printer ishlamaganini ko‘rsatgansiz. Mazkur sabab jarimani bekor qilish uchun asos bo‘la olmaydi. \nShartnoma shartlariga ko‘ra, hamkor PVZda zarur texnik vositalarning uzluksiz ishlashini ta’minlashi, nosozlik yuzaga kelgan taqdirda esa ularni o‘z vaqtida ta’mirlash yoki almashtirishni tashkil etishi shart. \nShu sababli, mazkur holatda qoidabuzarlik asosli deb hisoblanadi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 39,
+      "question_ru": "Я не смог сдать инкассацию, так как света не было",
+      "question_uz": "Men elektr energiyasi bo‘lmagani sababli inkassatsiyani topshira olmadim.",
+      "answer_ru": "Если причиной нарушения стало отсутствие электроэнергии, данную информацию и подтверждающие материалы необходимо было направить ответом на уведомление по электронной почте в течение 72 часов. \nВ таком случае мы смогли бы рассмотреть опровержение. Если ответ в течение 72 часов не поступает, нарушение обрабатывается в установленном порядке и выставляется штраф.",
+      "answer_uz": "Agar qoidabuzarlikka elektr energiyasining yo‘qligi sabab bo‘lgan bo‘lsa, ushbu ma’lumot va tasdiqlovchi materiallarni elektron pochta orqali yuborilgan bildirishnomaga 72 soat ichida javob tariqasida yuborishingiz kerak edi. \nBunday holatda biz rad etishni ko‘rib chiqishimiz mumkin edi. Agar 72 soat ichida javob kelib tushmasa, qoidabuzarlik belgilangan tartibda ko‘rib chiqiladi va jarima qo‘llaniladi.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 40,
+      "question_ru": "Инкассатор не приехал",
+      "question_uz": "Inkassator kelmadi.",
+      "answer_ru": "Понимаем вашу ситуацию. Если инкассатор не приехал по графику либо приехал в момент, когда ПВЗ временно был закрыт на обед, данную информацию можно было предоставить для рассмотрения и опровержения нарушения. \nПеред выставлением штрафа на электронную почту партнёра направляется уведомление о зафиксированном нарушении. С момента получения уведомления предоставляется 72 часа для ответа и опровержения. \nВ течение этого срока необходимо было ответить на полученное письмо, описать ситуацию и, при наличии, приложить подтверждающие материалы. В таком случае информация была бы передана на рассмотрение и обстоятельства ситуации были бы учтены при принятии решения. \nЕсли в течение 72 часов ответ на уведомление не поступает, нарушение обрабатывается в установленном порядке и штраф выставляется. \nПоэтому просим в дальнейшем обязательно проверять электронную почту и при наличии объективной причины своевременно отвечать на уведомление в течение установленного срока",
+      "answer_uz": "Vaziyatingizni tushunamiz. Agar inkassator belgilangan jadval bo‘yicha kelmagan bo‘lsa yoki PVZ vaqtincha tushlik uchun yopilgan paytda kelgan bo‘lsa, ushbu ma’lumotni ko‘rib chiqish va qoidabuzarlikni rad etish uchun taqdim etish mumkin edi.\n\nJarima qo‘llashdan oldin hamkorning elektron pochta manziliga aniqlangan qoidabuzarlik haqida bildirishnoma yuboriladi. Bildirishnoma olingan paytdan boshlab javob berish va qoidabuzarlikni rad etish uchun 72 soat vaqt beriladi.\n\nUshbu muddat ichida olingan xatga javob berish, vaziyatni batafsil bayon qilish va mavjud bo‘lsa, tasdiqlovchi materiallarni ilova qilish kerak edi. Bunday holatda ma’lumot ko‘rib chiqish uchun yuboriladi va qaror qabul qilishda vaziyatning barcha holatlari hisobga olinadi.\n\nAgar 72 soat ichida bildirishnomaga javob kelib tushmasa, qoidabuzarlik belgilangan tartibda ko‘rib chiqiladi va jarima qo‘llaniladi.\n\nShu sababli, kelgusida elektron pochtangizni muntazam tekshirib turishingizni va obyektiv sabab mavjud bo‘lsa, belgilangan muddat ichida bildirishnomaga o‘z vaqtida javob berishingizni so‘raymiz.",
+      "internal_notes": [],
+      "active": true
+    },
+    {
+      "id": 41,
+      "question_ru": "Электроэнергии нет на ПВЗ чтоб начать рабочий день",
+      "question_uz": "Ish kunini boshlash uchun PVZda elektr energiyasi yo‘q.",
+      "answer_ru": "Обращаем ваше внимание, что отсутствие электроэнергии на ПВЗ само по себе не является достаточным основанием для опровержения нарушения по несвоевременному открытию ПВЗ. \nДля обеспечения работы в подобных ситуациях необходимо заранее предусмотреть альтернативные варианты: \n— ноутбук должен быть заряжен и иметь достаточный уровень заряда для начала работы; \n— на ПВЗ должен находиться рабочий телефон с активным номером; \n— при отсутствии интернета необходимо использовать мобильный интернет, включив точку доступа на телефоне и подключив к ней ноутбук. \nПартнёру необходимо обеспечить своевременное открытие и работу ПВЗ, в том числе при временном отсутствии электроэнергии. \nВ связи с этим указанная причина не может быть принята как достаточное доказательство для опровержения зафиксированного нарушения.",
+      "answer_uz": "E’tiboringizni shunga qaratamizki, PVZda elektr energiyasining yo‘qligi o‘z-o‘zidan PVZni o‘z vaqtida ochmaslik bo‘yicha qayd etilgan qoidabuzarlikni rad etish uchun yetarli asos hisoblanmaydi.\n\nBunday holatlarda ishni ta’minlash uchun muqobil variantlarni oldindan ko‘zda tutish zarur: \n— noutbuk zaryadlangan va ishni boshlash uchun yetarli quvvatga ega bo‘lishi kerak; \n— PVZda faol raqamga ega bo‘lgan ishlaydigan telefon bo‘lishi kerak; \n— internet mavjud bo‘lmagan taqdirda mobil internetdan foydalanish, telefonda internet ulashish funksiyasini yoqish va noutbukni unga ulash kerak.\n\nHamkor elektr energiyasi vaqtincha bo‘lmagan holatlarda ham PVZning o‘z vaqtida ochilishi va ishlashini ta’minlashi kerak.\n\nShu sababli, ko‘rsatilgan sabab qayd etilgan qoidabuzarlikni rad etish uchun yetarli dalil sifatida qabul qilinishi mumkin emas.",
+      "internal_notes": [],
+      "active": true
+    }
+  ]
+}
