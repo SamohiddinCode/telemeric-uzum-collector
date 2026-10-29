@@ -20,6 +20,7 @@ class ReportConfig:
     agent_usernames: set[str] = field(default_factory=set)
     service_bot_usernames: set[str] = field(default_factory=set)
     report_mentions: tuple[str, ...] = ("@Ddmit05",)
+    report_operator_ids: set[int] = field(default_factory=set)
 
     @classmethod
     def from_env(cls, source_chat_id: int) -> "ReportConfig":
@@ -43,6 +44,11 @@ class ReportConfig:
             for value in os.getenv("REPORT_MENTIONS", "Ddmit05").split(",")
             if value.strip()
         )
+        report_operator_ids = {
+            int(value.strip())
+            for value in os.getenv("REPORT_OPERATOR_IDS", "8419189523").split(",")
+            if value.strip().lstrip("-").isdigit()
+        }
         return cls(
             source_chat_id=source_chat_id,
             report_chat_id=int(os.getenv("REPORT_CHAT_ID", "8419189523")),
@@ -58,4 +64,5 @@ class ReportConfig:
             agent_usernames=usernames,
             service_bot_usernames=service_bots,
             report_mentions=report_mentions,
+            report_operator_ids=report_operator_ids,
         )

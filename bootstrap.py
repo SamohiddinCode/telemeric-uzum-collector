@@ -4,7 +4,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -48,6 +48,15 @@ elif faq_shadow_enabled:
     logger.warning("FAQ shadow mode requested but Telegram bot sender is not configured")
 
 faq_shadow_tasks: set[asyncio.Task] = set()
+report_command_tasks: set[asyncio.Task] = set()
+handled_report_command_updates: set[int] = set()
+
+REPORT_BUTTON = "📊 Получить отчёт"
+REPORT_COMMAND_HELP = (
+    "Выберите <b>«Получить отчёт»</b>, затем отправьте дату: "
+    "<code>29.10.2026</code> или <code>2026-10-29</code>.\n\n"
+    "Также можно написать <b>сегодня</b> или <b>вчера</b>."
+)
 
 _original_deliver = collector.deliver
 _original_lifespan = collector.app.router.lifespan_context
@@ -61,6 +70,122 @@ def finish_faq_shadow_task(task: asyncio.Task) -> None:
         task.result()
     except Exception:
         logger.exception("Unexpected FAQ shadow task failure")
+
+
+def _control_message(update: dict) -> dict | None:
+    """Return a private command message only for an approved report operator."""
+    if not bot_sender:
+        return None
+    message = update.get("message") if isinstance(update, dict) else None
+    if not isinstance(message, dict):
+        return None
+    chat = message.get("chat") or {}
+    sender = message.get("from") or {}
+    try:
+        chat_id = int(chat.get("id") or 0)
+        sender_id = int(sender.get("id") or 0)
+    except (TypeError, ValueError):
+        return None
+    if (
+        chat.get("type") != "private"
+        or chat_id != sender_id
+        or sender_id not in report_config.report_operator_ids
+    ):
+        return None
+    return message
+
+
+def _command_day(text: str) -> date | None:
+    value = " ".join(text.casefold().strip().split())
+    now = datetime.now(ZoneInfo(report_config.timezone)).date()
+    if value in {"сегодня", "segodnya", "today"}:
+        return now
+    if value in {"вчера", "vchera", "yesterday"}:
+        return now - timedelta(days=1)
+    for pattern in ("%d.%m.%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, pattern).date()
+        except ValueError:
+            pass
+    return None
+
+
+async def _send_private_report(chat_id: int, day: date) -> None:
+    """Build a requested report without changing the scheduled-delivery state."""
+    assert bot_sender is not None
+    await bot_sender.send_message(chat_id, f"⏳ Готовлю отчёт за <b>{day:%d.%m.%Y}</b>…")
+    try:
+        await refresh_analytics_cache(day)
+        result = await report_service.send_day(
+            bot_sender,
+            day,
+            force=True,
+            report_chat_id=chat_id,
+        )
+    except Exception:
+        logger.exception("Private report request failed for %s", day)
+        await bot_sender.send_message(
+            chat_id,
+            "❌ Не удалось подготовить отчёт. Попробуйте ещё раз через минуту.",
+        )
+        return
+    if result.get("sent"):
+        await bot_sender.send_message(chat_id, "✅ Отчёт отправлен.")
+
+
+async def handle_report_commands(updates: list[dict]) -> None:
+    """Respond to private report requests from approved operator IDs only."""
+    if not bot_sender:
+        return
+    for update in updates:
+        message = _control_message(update)
+        if not message:
+            continue
+        update_id = int(update.get("update_id") or message.get("message_id") or 0)
+        if update_id and update_id in handled_report_command_updates:
+            continue
+        if update_id:
+            handled_report_command_updates.add(update_id)
+            # Bot update IDs are monotonic. Keep this in-memory guard bounded.
+            if len(handled_report_command_updates) > 1_000:
+                handled_report_command_updates.clear()
+                handled_report_command_updates.add(update_id)
+        chat_id = int((message.get("chat") or {}).get("id"))
+        text = str(message.get("text") or "").strip()
+        command = text.split(maxsplit=1)
+        if text.startswith("/start"):
+            await bot_sender.send_message(
+                chat_id,
+                "<b>Управление отчётами</b>\n\n" + REPORT_COMMAND_HELP,
+                reply_markup={
+                    "keyboard": [[{"text": REPORT_BUTTON}]],
+                    "resize_keyboard": True,
+                    "is_persistent": True,
+                },
+            )
+            continue
+        if text == REPORT_BUTTON or text.startswith("/report") and len(command) == 1:
+            await bot_sender.send_message(chat_id, REPORT_COMMAND_HELP)
+            continue
+        candidate = command[1] if text.startswith("/report ") and len(command) == 2 else text
+        day = _command_day(candidate)
+        if not day:
+            await bot_sender.send_message(chat_id, "Не понял дату.\n\n" + REPORT_COMMAND_HELP)
+            continue
+        if day > datetime.now(ZoneInfo(report_config.timezone)).date():
+            await bot_sender.send_message(chat_id, "Нельзя сформировать отчёт за будущую дату.")
+            continue
+        await _send_private_report(chat_id, day)
+
+
+def finish_report_command_task(task: asyncio.Task) -> None:
+    report_command_tasks.discard(task)
+    if task.cancelled():
+        return
+    try:
+        task.result()
+    except Exception:
+        logger.exception("Unexpected private report command failure")
 
 
 async def refresh_analytics_cache(day) -> int:
@@ -99,15 +224,23 @@ async def refresh_analytics_cache(day) -> int:
 
 async def deliver_with_analytics(updates):
     """Preserve existing site delivery, then mirror data into analytics cache."""
-    await _original_deliver(updates)
+    # Private commands are consumed before the original collector path so they
+    # cannot be written to the partner-chat history or SLA cache.
+    regular_updates = [update for update in updates if not _control_message(update)]
+    if regular_updates:
+        await _original_deliver(regular_updates)
     try:
-        message_store.record_updates(updates)
+        message_store.record_updates(regular_updates)
     except Exception:
         logger.exception("Analytics cache write failed; collector delivery remains healthy")
     if faq_shadow:
-        task = asyncio.create_task(faq_shadow.handle_updates(updates))
+        task = asyncio.create_task(faq_shadow.handle_updates(regular_updates))
         faq_shadow_tasks.add(task)
         task.add_done_callback(finish_faq_shadow_task)
+    if any(_control_message(update) for update in updates):
+        task = asyncio.create_task(handle_report_commands(updates))
+        report_command_tasks.add(task)
+        task.add_done_callback(finish_report_command_task)
 
 
 async def report_runner() -> None:
@@ -150,6 +283,11 @@ async def analytics_lifespan(application):
                 task.cancel()
             if pending_faq_tasks:
                 await asyncio.gather(*pending_faq_tasks, return_exceptions=True)
+            pending_command_tasks = tuple(report_command_tasks)
+            for task in pending_command_tasks:
+                task.cancel()
+            if pending_command_tasks:
+                await asyncio.gather(*pending_command_tasks, return_exceptions=True)
 
 
 app.router.lifespan_context = analytics_lifespan

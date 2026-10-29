@@ -36,15 +36,23 @@ class TelegramBotSender:
             "username": chat.get("username"),
         }
 
-    async def send_message(self, chat_id: int, text: str) -> None:
+    async def send_message(
+        self,
+        chat_id: int,
+        text: str,
+        reply_markup: dict[str, Any] | None = None,
+    ) -> None:
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "HTML",
+            "link_preview_options": {"is_disabled": True},
+        }
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
         await self._request(
             "sendMessage",
-            json={
-                "chat_id": chat_id,
-                "text": text,
-                "parse_mode": "HTML",
-                "link_preview_options": {"is_disabled": True},
-            },
+            json=payload,
         )
 
     async def send_report(self, chat_id: int, paths: list[str], text: str) -> None:

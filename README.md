@@ -56,6 +56,7 @@ Important settings:
 - `SLA_TARGET_MINUTES=15`. SLA считается как доля всех квалифицированных обращений
   партнёров, получивших первый ответ поддержки не позднее чем через 15 минут.
 - `REPORT_MENTIONS=@Ddmit05` — упоминания в подписи к альбому отчёта.
+- `REPORT_OPERATOR_IDS=8419189523` — кто может запросить отчёт в личном чате с ботом.
 - `ANALYTICS_AGENT_USERNAMES=uzum_franchise` — shared support account without employee-level breakdown.
 - `TICKET_GAP_MINUTES=30` — customer messages inside this gap stay in one open ticket until the first support response.
 - `GOOGLE_SHEETS_WEBHOOK_URL` and `GOOGLE_SHEETS_WEBHOOK_SECRET` — optional
@@ -102,6 +103,15 @@ Protected operator endpoints:
 - `POST /analytics/report-now` with the same header — force a test report immediately.
 - `GET /analytics/check-recipient` with the same header — verify that the report bot can reach the configured recipient without sending a message.
 - `POST /analytics/test-delivery` with the same header — send one explicit staging connectivity confirmation.
+
+## Личный запрос отчёта через бота
+
+Сервис не меняет webhook: он остаётся у существующего `telegram-usedesk-bridge`.
+Когда bridge передаёт личное сообщение бота в collector, команда доступна только
+ID из `REPORT_OPERATOR_IDS`. В личном чате отправьте `/start`, нажмите
+**«📊 Получить отчёт»**, затем напишите дату в виде `29.10.2026` или
+`2026-10-29` (также поддерживаются «сегодня» и «вчера»). Отчёт с тремя PNG
+придёт в этот же личный чат и не будет считаться сообщением партнёрской группы.
 
 The legacy `?token=` form remains available for the browser setup page, but
 operator API calls should use the authorization header so secrets do not enter

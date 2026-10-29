@@ -40,6 +40,8 @@ services:
         value: opening_closing_bot
       - key: REPORT_MENTIONS
         value: "@Ddmit05"
+      - key: REPORT_OPERATOR_IDS
+        value: "8419189523"
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
