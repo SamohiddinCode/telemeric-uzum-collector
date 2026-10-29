@@ -52,6 +52,7 @@ report_command_tasks: set[asyncio.Task] = set()
 handled_report_command_updates: set[int] = set()
 
 REPORT_BUTTON = "📊 Получить отчёт"
+GROUP_REPORT_BUTTON = "📤 Отправить в группу · "
 REPORT_COMMAND_HELP = (
     "Выберите <b>«Получить отчёт»</b>, затем отправьте дату: "
     "<code>29.10.2026</code> или <code>2026-10-29</code>.\n\n"
@@ -110,9 +111,10 @@ def _command_day(text: str) -> date | None:
     return None
 
 
-async def _send_private_report(chat_id: int, day: date) -> None:
+async def _send_private_report(chat_id: int, day: date, *, to_group: bool = False) -> None:
     """Build a requested report without changing the scheduled-delivery state."""
     assert bot_sender is not None
+    recipient = report_config.report_group_chat_id if to_group else chat_id
     await bot_sender.send_message(chat_id, f"⏳ Готовлю отчёт за <b>{day:%d.%m.%Y}</b>…")
     try:
         await refresh_analytics_cache(day)
@@ -120,7 +122,7 @@ async def _send_private_report(chat_id: int, day: date) -> None:
             bot_sender,
             day,
             force=True,
-            report_chat_id=chat_id,
+            report_chat_id=recipient,
         )
     except Exception:
         logger.exception("Private report request failed for %s", day)
@@ -130,7 +132,17 @@ async def _send_private_report(chat_id: int, day: date) -> None:
         )
         return
     if result.get("sent"):
-        await bot_sender.send_message(chat_id, "✅ Отчёт отправлен.")
+        await bot_sender.send_message(
+            chat_id,
+            f"✅ Отчёт за {day:%d.%m.%Y} отправлен" + (" в группу." if to_group else " вам в личку."),
+            reply_markup={
+                "keyboard": [
+                    [{"text": GROUP_REPORT_BUTTON + day.strftime("%d.%m.%Y")}],
+                    [{"text": REPORT_BUTTON}],
+                ],
+                "resize_keyboard": True,
+            },
+        )
 
 
 async def handle_report_commands(updates: list[dict]) -> None:
@@ -167,7 +179,12 @@ async def handle_report_commands(updates: list[dict]) -> None:
         if text == REPORT_BUTTON or text.startswith("/report") and len(command) == 1:
             await bot_sender.send_message(chat_id, REPORT_COMMAND_HELP)
             continue
-        candidate = command[1] if text.startswith("/report ") and len(command) == 2 else text
+        to_group = text.startswith(GROUP_REPORT_BUTTON)
+        candidate = (
+            text.removeprefix(GROUP_REPORT_BUTTON) if to_group
+            else command[1] if text.startswith("/report ") and len(command) == 2
+            else text
+        )
         day = _command_day(candidate)
         if not day:
             await bot_sender.send_message(chat_id, "Не понял дату.\n\n" + REPORT_COMMAND_HELP)
@@ -175,7 +192,7 @@ async def handle_report_commands(updates: list[dict]) -> None:
         if day > datetime.now(ZoneInfo(report_config.timezone)).date():
             await bot_sender.send_message(chat_id, "Нельзя сформировать отчёт за будущую дату.")
             continue
-        await _send_private_report(chat_id, day)
+        await _send_private_report(chat_id, day, to_group=to_group)
 
 
 def finish_report_command_task(task: asyncio.Task) -> None:

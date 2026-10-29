@@ -41,7 +41,9 @@ services:
       - key: REPORT_MENTIONS
         value: "@Ddmit05"
       - key: REPORT_OPERATOR_IDS
-        value: "8419189523"
+        value: "8419189523,7952444345"
+      - key: REPORT_GROUP_CHAT_ID
+        value: "-5271279516"
       - key: TELEGRAM_API_ID
         sync: false
       - key: TELEGRAM_API_HASH
